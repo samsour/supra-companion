@@ -114,7 +114,11 @@ export default function LobbyScreen() {
       {isOrganizer && trip.status === 'live' && (
         <button className="btn" onClick={end}>Finish trip</button>
       )}
-      {trip.status === 'ended' && <div className="hint">This trip has ended. Results screen lands on Day 5.</div>}
+      {trip.status === 'ended' && (
+        <button className="btn btn-primary" onClick={() => navigate(`/trip/${tripId}/results`)}>
+          View results
+        </button>
+      )}
 
       <p className="hint">
         <Link to="/" style={{ color: 'var(--cyan)' }}>← Join a different trip</Link>

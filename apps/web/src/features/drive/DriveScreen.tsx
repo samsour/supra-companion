@@ -10,6 +10,7 @@ import {
   emptyTotals,
   formatGap,
   kmh,
+  snapToRoute,
   type Checkpoint,
   type ConvoyMemberInput,
   type LocationSample,
@@ -116,6 +117,21 @@ export default function DriveScreen() {
   const me = convoy?.find((e) => e.userId === userId)
   const handleOf = (id: string) => members.find((m) => m.userId === id)?.handle ?? id.slice(0, 6)
 
+  // checkpoints projected onto the route, for the "next checkpoint" readout
+  const cpAlongs = useMemo(() => {
+    if (!routeIndex) return []
+    return checkpoints
+      .map((cp) => ({ cp, fix: snapToRoute(routeIndex, { lat: cp.lat, lng: cp.lng }) }))
+      .filter((x) => x.fix.offRouteM < 500)
+      .sort((a, b) => a.fix.alongM - b.fix.alongM)
+  }, [routeIndex, checkpoints])
+
+  const nextCp = useMemo(() => {
+    if (!me || me.offRoute) return null
+    const ahead = cpAlongs.find((x) => x.fix.alongM > me.alongM + 50)
+    return ahead ? { ...ahead.cp, distanceM: ahead.fix.alongM - me.alongM } : null
+  }, [cpAlongs, me])
+
   const cars = useMemo<CarPosition[]>(() => {
     const list: CarPosition[] = livePeers.map((p) => ({
       userId: p.userId,
@@ -190,6 +206,20 @@ export default function DriveScreen() {
           </div>
         </div>
       </div>
+
+      {nextCp && (
+        <div className="card next-cp">
+          <div className="row">
+            <span className="label">Next checkpoint</span>
+            <strong className="display" style={{ fontSize: 20 }}>
+              {{ fuel: '⛽', food: '🍔', photo: '📸', meet: '🏁' }[nextCp.kind]} {nextCp.name}
+            </strong>
+            <span className="display" style={{ fontSize: 24, color: 'var(--cyan)' }}>
+              {(nextCp.distanceM / 1000).toFixed(nextCp.distanceM < 10_000 ? 1 : 0)} km
+            </span>
+          </div>
+        </div>
+      )}
 
       {convoy && convoy.length > 1 && (
         <div className="card">

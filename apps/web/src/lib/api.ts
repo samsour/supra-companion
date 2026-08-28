@@ -186,6 +186,32 @@ export async function finishTrip(tripId: string): Promise<void> {
   if (error) throw error
 }
 
+export interface TripStatsRow {
+  userId: string
+  distanceKm: number
+  movingSecs: number
+  avgSpeedKmh: number | null
+  topSpeedKmh: number | null
+}
+
+export async function getTripStats(tripId: string): Promise<TripStatsRow[]> {
+  const { data, error } = await supabase.from('trip_stats').select('*').eq('trip_id', tripId)
+  if (error) throw error
+  return (data as {
+    user_id: string
+    distance_km: number
+    moving_secs: number
+    avg_speed_kmh: number | null
+    top_speed_kmh: number | null
+  }[]).map((r) => ({
+    userId: r.user_id,
+    distanceKm: Number(r.distance_km),
+    movingSecs: r.moving_secs,
+    avgSpeedKmh: r.avg_speed_kmh != null ? Number(r.avg_speed_kmh) : null,
+    topSpeedKmh: r.top_speed_kmh != null ? Number(r.top_speed_kmh) : null,
+  }))
+}
+
 export async function insertSamples(
   tripId: string,
   userId: string,
