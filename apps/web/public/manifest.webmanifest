@@ -1,0 +1,13 @@
+{
+  "name": "Supra Companion",
+  "short_name": "Supra",
+  "description": "Convoy companion for Supra roadtrips",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0B0E14",
+  "theme_color": "#0B0E14",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

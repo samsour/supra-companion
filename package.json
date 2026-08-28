@@ -1,0 +1,11 @@
+{
+  "name": "supra-companion",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @supra/web dev",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck"
+  },
+  "packageManager": "pnpm@11.17.0"
+}
