@@ -1,4 +1,13 @@
-import type { RouteGeometry, Trip, TripMember, TripStatus, LocationSample, MemberRole } from '@supra/core'
+import type {
+  Checkpoint,
+  CheckpointKind,
+  LocationSample,
+  MemberRole,
+  RouteGeometry,
+  Trip,
+  TripMember,
+  TripStatus,
+} from '@supra/core'
 import { supabase } from './supabase'
 
 interface TripRow {
@@ -83,6 +92,34 @@ export async function getMembers(tripId: string): Promise<TripMember[]> {
     .order('joined_at')
   if (error) throw error
   return (data as MemberRow[]).map(toMember)
+}
+
+interface CheckpointRow {
+  id: string
+  trip_id: string
+  name: string
+  kind: CheckpointKind
+  lat: number
+  lng: number
+  order_idx: number
+}
+
+export async function getCheckpoints(tripId: string): Promise<Checkpoint[]> {
+  const { data, error } = await supabase
+    .from('checkpoints')
+    .select('*')
+    .eq('trip_id', tripId)
+    .order('order_idx')
+  if (error) throw error
+  return (data as CheckpointRow[]).map((r) => ({
+    id: r.id,
+    tripId: r.trip_id,
+    name: r.name,
+    kind: r.kind,
+    lat: r.lat,
+    lng: r.lng,
+    orderIdx: r.order_idx,
+  }))
 }
 
 export async function setTripStatus(tripId: string, status: TripStatus): Promise<void> {

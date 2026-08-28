@@ -10,14 +10,18 @@ import {
   emptyTotals,
   formatGap,
   kmh,
+  type Checkpoint,
   type ConvoyMemberInput,
   type LocationSample,
   type Trip,
   type TripMember,
 } from '@supra/core'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getMembers, getTrip, insertSamples } from '../../lib/api'
+import { getCheckpoints, getMembers, getTrip, insertSamples } from '../../lib/api'
+import { type CarPosition } from '../../map/ConvoyMap'
+
+const ConvoyMap = lazy(() => import('../../map/ConvoyMap'))
 import { useGeolocation } from '../../location/useGeolocation'
 import { useWakeLock } from '../../location/useWakeLock'
 import { useConvoyChannel } from '../../realtime/useConvoyChannel'
@@ -30,10 +34,13 @@ export default function DriveScreen() {
   const [members, setMembers] = useState<TripMember[]>([])
   const [, setTick] = useState(0)
 
+  const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([])
+
   useEffect(() => {
     if (!tripId) return
     void getTrip(tripId).then(setTrip)
     void getMembers(tripId).then(setMembers)
+    void getCheckpoints(tripId).then(setCheckpoints)
   }, [tripId])
 
   // re-render every second so gaps/staleness stay current between pings
@@ -47,23 +54,32 @@ export default function DriveScreen() {
 
   const totalsRef = useRef(emptyTotals())
   const pendingRef = useRef<LocationSample[]>([])
+  const latestRef = useRef<LocationSample | null>(null)
   const lastPingAtRef = useRef(0)
 
-  const onSample = useCallback(
-    (s: LocationSample) => {
-      totalsRef.current = addSample(totalsRef.current, s)
-      pendingRef.current.push(s)
+  const onSample = useCallback((s: LocationSample) => {
+    totalsRef.current = addSample(totalsRef.current, s)
+    pendingRef.current.push(s)
+    latestRef.current = s
+  }, [])
+
+  const { latest, error: geoError } = useGeolocation(onSample)
+
+  // heartbeat publisher: steady pings even when the GPS reports no movement,
+  // adaptive interval based on whether we're moving
+  useEffect(() => {
+    const id = setInterval(() => {
+      const s = latestRef.current
+      if (!s) return
       const moving = (s.speedMps ?? 0) >= STATIONARY_SPEED_MPS
       const interval = moving ? PING_INTERVAL_MOVING_MS : PING_INTERVAL_STATIONARY_MS
       if (Date.now() - lastPingAtRef.current >= interval) {
         lastPingAtRef.current = Date.now()
         publish(s)
       }
-    },
-    [publish],
-  )
-
-  const { latest, error: geoError } = useGeolocation(onSample)
+    }, 1_000)
+    return () => clearInterval(id)
+  }, [publish])
 
   // persist buffered samples for stats (only while the trip is live)
   useEffect(() => {
@@ -99,6 +115,31 @@ export default function DriveScreen() {
 
   const me = convoy?.find((e) => e.userId === userId)
   const handleOf = (id: string) => members.find((m) => m.userId === id)?.handle ?? id.slice(0, 6)
+
+  const cars = useMemo<CarPosition[]>(() => {
+    const list: CarPosition[] = livePeers.map((p) => ({
+      userId: p.userId,
+      handle: handleOf(p.userId),
+      lat: p.lat,
+      lng: p.lng,
+      heading: p.heading,
+      isSelf: false,
+      stale: now - p.ts > STALE_AFTER_MS,
+    }))
+    if (latest) {
+      list.push({
+        userId,
+        handle: handleOf(userId),
+        lat: latest.lat,
+        lng: latest.lng,
+        heading: latest.heading,
+        isSelf: true,
+        stale: false,
+      })
+    }
+    return list
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [peers, latest, members, now, userId])
   const totals = totalsRef.current
   const speedKmh = latest?.speedMps != null ? kmh(latest.speedMps) : null
 
@@ -174,7 +215,9 @@ export default function DriveScreen() {
         </div>
       )}
 
-      <div className="map-placeholder">Map — Day 2</div>
+      <Suspense fallback={<div className="map-placeholder">Loading map…</div>}>
+        <ConvoyMap cars={cars} route={trip?.routeGeojson ?? null} checkpoints={checkpoints} />
+      </Suspense>
 
       {geoError && <div className="notice">GPS: {geoError}. Allow location access for this site.</div>}
       {!wakeLockHeld && (

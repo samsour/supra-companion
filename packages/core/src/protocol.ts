@@ -10,7 +10,7 @@ export interface PositionPing extends LocationSample {
 }
 
 export const PING_INTERVAL_MOVING_MS = 4_000
-export const PING_INTERVAL_STATIONARY_MS = 30_000
+export const PING_INTERVAL_STATIONARY_MS = 15_000
 /** Below this we consider the car stationary (GPS drift territory). */
 export const STATIONARY_SPEED_MPS = 1.5
 /** How often buffered samples are flushed to location_samples. */

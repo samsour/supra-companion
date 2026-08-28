@@ -12,6 +12,7 @@ export function useConvoyChannel(tripId: string, userId: string) {
   const [peers, setPeers] = useState<Record<string, PositionPing>>({})
   const [connected, setConnected] = useState(false)
   const channelRef = useRef<RealtimeChannel | null>(null)
+  const queuedRef = useRef<LocationSample | null>(null)
 
   useEffect(() => {
     const ch = supabase.channel(tripChannel(tripId), {
@@ -22,7 +23,15 @@ export function useConvoyChannel(tripId: string, userId: string) {
       if (ping.userId === userId) return
       setPeers((prev) => ({ ...prev, [ping.userId]: ping }))
     })
-    ch.subscribe((status) => setConnected(status === 'SUBSCRIBED'))
+    ch.subscribe((status) => {
+      setConnected(status === 'SUBSCRIBED')
+      // deliver the fix that arrived while we were still joining
+      if (status === 'SUBSCRIBED' && queuedRef.current) {
+        const ping: PositionPing = { ...queuedRef.current, userId }
+        queuedRef.current = null
+        void ch.send({ type: 'broadcast', event: EVENT_POSITION, payload: ping })
+      }
+    })
     channelRef.current = ch
     return () => {
       channelRef.current = null
@@ -35,7 +44,10 @@ export function useConvoyChannel(tripId: string, userId: string) {
   const publish = useCallback(
     (s: LocationSample) => {
       const ch = channelRef.current
-      if (!ch) return
+      if (!ch || ch.state !== 'joined') {
+        queuedRef.current = s
+        return
+      }
       const ping: PositionPing = { ...s, userId }
       void ch.send({ type: 'broadcast', event: EVENT_POSITION, payload: ping })
     },

@@ -279,6 +279,97 @@ h1 .glow {
   letter-spacing: 0.1em;
 }
 
+.map-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 280px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--panel2);
+}
+
+/* higher specificity than mapbox-gl's own `.mapboxgl-map { position: relative }`,
+   which otherwise collapses the container to zero height */
+.map-wrap > .map-canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.map-wrap .mapboxgl-canvas {
+  outline: none;
+}
+
+.car-marker {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.car-arrow {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-bottom: 18px solid var(--car-color);
+  filter: drop-shadow(0 0 6px var(--car-color));
+  /* rotation is driven per-frame by the animation loop — no CSS transition */
+}
+
+.car-self .car-arrow {
+  border-left-width: 10px;
+  border-right-width: 10px;
+  border-bottom-width: 22px;
+}
+
+.car-label {
+  font-family: var(--disp);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--car-color);
+  text-shadow: 0 0 8px rgba(0, 0, 0, 0.9), 0 0 4px var(--car-color);
+}
+
+.car-stale {
+  opacity: 0.4;
+}
+
+.cp-marker {
+  font-size: 16px;
+  filter: drop-shadow(0 0 4px rgba(53, 224, 242, 0.6));
+  cursor: default;
+}
+
+.recenter-btn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
+  appearance: none;
+  border: 1px solid var(--amber);
+  background: rgba(11, 14, 20, 0.85);
+  color: var(--amber);
+  font-family: var(--disp);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.recenter-btn:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
 .notice {
   border: 1px solid rgba(230, 83, 184, 0.5);
   background: rgba(230, 83, 184, 0.08);
