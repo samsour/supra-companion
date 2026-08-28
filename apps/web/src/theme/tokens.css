@@ -345,6 +345,27 @@ h1 .glow {
   cursor: default;
 }
 
+.cp-editable {
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.wp-marker {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--ground);
+  border: 2px solid var(--amber);
+  color: var(--amber);
+  font-family: var(--disp);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 12px;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 8px rgba(255, 160, 46, 0.5);
+}
+
 .recenter-btn {
   position: absolute;
   right: 12px;

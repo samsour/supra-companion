@@ -16,6 +16,7 @@ interface TripRow {
   status: TripStatus
   organizer_id: string
   route_geojson: RouteGeometry | null
+  route_waypoints: [number, number][] | null
   starts_at: string | null
   invite_code: string
 }
@@ -36,6 +37,7 @@ const toTrip = (r: TripRow): Trip => ({
   status: r.status,
   organizerId: r.organizer_id,
   routeGeojson: r.route_geojson,
+  routeWaypoints: r.route_waypoints,
   startsAt: r.starts_at,
   inviteCode: r.invite_code,
 })
@@ -120,6 +122,58 @@ export async function getCheckpoints(tripId: string): Promise<Checkpoint[]> {
     lng: r.lng,
     orderIdx: r.order_idx,
   }))
+}
+
+export async function updateTripRoute(
+  tripId: string,
+  route: RouteGeometry | null,
+  waypoints: [number, number][] | null,
+): Promise<void> {
+  const { error } = await supabase
+    .from('trips')
+    .update({ route_geojson: route, route_waypoints: waypoints })
+    .eq('id', tripId)
+  if (error) throw error
+}
+
+export async function addCheckpoint(
+  tripId: string,
+  cp: { name: string; kind: CheckpointKind; lat: number; lng: number; orderIdx: number },
+): Promise<void> {
+  const { error } = await supabase.from('checkpoints').insert({
+    trip_id: tripId,
+    name: cp.name,
+    kind: cp.kind,
+    lat: cp.lat,
+    lng: cp.lng,
+    order_idx: cp.orderIdx,
+  })
+  if (error) throw error
+}
+
+export async function deleteCheckpoint(checkpointId: string): Promise<void> {
+  const { error } = await supabase.from('checkpoints').delete().eq('id', checkpointId)
+  if (error) throw error
+}
+
+/** Mapbox Directions along the picked waypoints (driving profile). */
+export async function fetchDirections(
+  waypoints: [number, number][],
+): Promise<{ geometry: RouteGeometry; distanceM: number }> {
+  const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
+  if (!token) throw new Error('VITE_MAPBOX_TOKEN missing')
+  const coords = waypoints.map(([lng, lat]) => `${lng},${lat}`).join(';')
+  const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?geometries=geojson&overview=full&access_token=${token}`
+  const res = await fetch(url)
+  const body = (await res.json()) as {
+    code?: string
+    message?: string
+    routes?: { geometry: RouteGeometry; distance: number }[]
+  }
+  if (!res.ok || body.code !== 'Ok' || !body.routes?.[0]) {
+    throw new Error(body.message ?? `Directions failed (${body.code ?? res.status})`)
+  }
+  return { geometry: body.routes[0].geometry, distanceM: body.routes[0].distance }
 }
 
 export async function setTripStatus(tripId: string, status: TripStatus): Promise<void> {

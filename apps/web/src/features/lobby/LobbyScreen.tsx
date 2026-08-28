@@ -1,4 +1,4 @@
-import type { Trip, TripMember } from '@supra/core'
+import { buildRouteIndex, type Trip, type TripMember } from '@supra/core'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { finishTrip, getMembers, getTrip, setTripStatus } from '../../lib/api'
@@ -82,6 +82,24 @@ export default function LobbyScreen() {
               </span>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="row">
+          <div>
+            <div className="label">Route</div>
+            <div>
+              {trip.routeGeojson
+                ? `${(buildRouteIndex(trip.routeGeojson).totalM / 1000).toFixed(0)} km set`
+                : 'Not set yet'}
+            </div>
+          </div>
+          {isOrganizer && (
+            <button className="btn" style={{ width: 'auto' }} onClick={() => navigate(`/trip/${tripId}/route`)}>
+              {trip.routeGeojson ? 'Edit route' : 'Plan route'}
+            </button>
+          )}
         </div>
       </div>
 

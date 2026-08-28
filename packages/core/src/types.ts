@@ -19,6 +19,8 @@ export interface Trip {
   status: TripStatus
   organizerId: string
   routeGeojson: RouteGeometry | null
+  /** the organizer's picked waypoints, [lng, lat] — kept so the route stays editable */
+  routeWaypoints: [number, number][] | null
   startsAt: string | null
   inviteCode: string
 }
