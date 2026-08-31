@@ -223,6 +223,32 @@ h1 .glow {
   font-size: 14px;
 }
 
+.recent-row {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--line-soft);
+  width: 100%;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 2px;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-row:last-child {
+  border-bottom: none;
+}
+
+.recent-row:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

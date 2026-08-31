@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createTrip, joinTrip, loadProfile, saveProfile } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
+import { loadRecentTrips } from '../../lib/recentTrips'
 
 type Mode = 'join' | 'create'
 
@@ -13,6 +14,7 @@ export default function JoinScreen() {
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [recent] = useState(loadRecentTrips)
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -38,6 +40,20 @@ export default function JoinScreen() {
           Supra <span className="glow">Companion</span>
         </h1>
       </header>
+
+      {recent.length > 0 && (
+        <div className="card">
+          <div className="label">Jump back in</div>
+          <div>
+            {recent.map((t) => (
+              <button className="recent-row" key={t.id} onClick={() => navigate(`/trip/${t.id}`)}>
+                <strong>{t.name}</strong>
+                <span className="car">{t.status}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="tabs" role="tablist">
         <button className="tab" role="tab" aria-selected={mode === 'join'} onClick={() => setMode('join')}>

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { finishTrip, getMembers, getTrip, setTripStatus } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
+import { rememberTrip } from '../../lib/recentTrips'
 import { useSession } from '../../session'
 
 export default function LobbyScreen() {
@@ -20,6 +21,7 @@ export default function LobbyScreen() {
         setTrip(t)
         setMembers(m)
         setError(null)
+        rememberTrip(t)
       })
       .catch((e: unknown) => setError(errorMessage(e)))
   }, [tripId])
