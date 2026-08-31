@@ -26,6 +26,8 @@ interface Props {
 
 /** camera zoom while following own car — follow always returns to this */
 const FOLLOW_ZOOM = 16
+/** chase-cam tilt while following (degrees from top-down) */
+const FOLLOW_PITCH = 55
 
 const PEER_COLORS = ['#35e0f2', '#e653b8', '#7cff6b', '#ffd02e', '#9d7bff', '#ff6b5e']
 const colorFor = (userId: string) => {
@@ -230,7 +232,13 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
     const map = mapRef.current
     if (!map || !loaded || !followRef.current || !self) return
     const bearing = self.heading ?? map.getBearing()
-    map.easeTo({ center: [self.lng, self.lat], zoom: FOLLOW_ZOOM, bearing, duration: 900 })
+    map.easeTo({
+      center: [self.lng, self.lat],
+      zoom: FOLLOW_ZOOM,
+      pitch: FOLLOW_PITCH,
+      bearing,
+      duration: 900,
+    })
   }, [self?.lat, self?.lng, self?.heading, loaded, follow])
 
   const showAll = () => {
@@ -250,7 +258,7 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
       followRef.current = true
       setFollow(true)
     }, 10_000)
-    map.fitBounds(bounds, { padding: 70, maxZoom: 14, bearing: 0, duration: 800 })
+    map.fitBounds(bounds, { padding: 70, maxZoom: 14, bearing: 0, pitch: 0, duration: 800 })
   }
 
   if (!token) {
