@@ -16,13 +16,36 @@ import {
   type LocationSample,
   type Trip,
   type TripMember,
+  type TripTotals,
 } from '@supra/core'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getCheckpoints, getMembers, getTrip, insertSamples } from '../../lib/api'
 import { type CarPosition } from '../../map/ConvoyMap'
 
 const ConvoyMap = lazy(() => import('../../map/ConvoyMap'))
+
+// totals survive reloads/crashes mid-drive — a mounted phone will lose the
+// tab at some point, and the km counter shouldn't reset when it does
+const totalsKey = (tripId: string, userId: string) => `supra.totals.${tripId}.${userId}`
+
+function loadTotals(tripId: string, userId: string): TripTotals {
+  try {
+    const raw = localStorage.getItem(totalsKey(tripId, userId))
+    if (raw) return JSON.parse(raw) as TripTotals
+  } catch {
+    /* private mode etc. */
+  }
+  return emptyTotals()
+}
+
+function saveTotals(tripId: string, userId: string, totals: TripTotals): void {
+  try {
+    localStorage.setItem(totalsKey(tripId, userId), JSON.stringify(totals))
+  } catch {
+    /* best effort */
+  }
+}
 import { useGeolocation } from '../../location/useGeolocation'
 import { useWakeLock } from '../../location/useWakeLock'
 import { useConvoyChannel } from '../../realtime/useConvoyChannel'
@@ -31,6 +54,7 @@ import { useSession } from '../../session'
 export default function DriveScreen() {
   const { tripId } = useParams<{ tripId: string }>()
   const { userId } = useSession()
+  const navigate = useNavigate()
   const [trip, setTrip] = useState<Trip | null>(null)
   const [members, setMembers] = useState<TripMember[]>([])
   const [, setTick] = useState(0)
@@ -53,7 +77,7 @@ export default function DriveScreen() {
   const wakeLockHeld = useWakeLock(true)
   const { peers, publish, connected } = useConvoyChannel(tripId ?? '', userId)
 
-  const totalsRef = useRef(emptyTotals())
+  const totalsRef = useRef(tripId ? loadTotals(tripId, userId) : emptyTotals())
   const pendingRef = useRef<LocationSample[]>([])
   const latestRef = useRef<LocationSample | null>(null)
   const lastPingAtRef = useRef(0)
@@ -90,9 +114,34 @@ export default function DriveScreen() {
       if (batch.length > 0) void insertSamples(tripId, userId, batch).catch(() => {
         pendingRef.current.unshift(...batch) // offline: retry on the next flush
       })
+      saveTotals(tripId, userId, totalsRef.current)
     }, SAMPLE_FLUSH_INTERVAL_MS)
     return () => clearInterval(id)
   }, [tripId, userId, trip?.status])
+
+  // save totals when the tab hides/closes too
+  useEffect(() => {
+    if (!tripId) return
+    const onHide = () => saveTotals(tripId, userId, totalsRef.current)
+    window.addEventListener('pagehide', onHide)
+    document.addEventListener('visibilitychange', onHide)
+    return () => {
+      window.removeEventListener('pagehide', onHide)
+      document.removeEventListener('visibilitychange', onHide)
+    }
+  }, [tripId, userId])
+
+  // notice when the organizer ends the trip → everyone lands on results
+  useEffect(() => {
+    if (!tripId) return
+    const id = setInterval(() => {
+      void getTrip(tripId).then((t) => {
+        setTrip(t)
+        if (t.status === 'ended') navigate(`/trip/${tripId}/results`)
+      }).catch(() => {})
+    }, 15_000)
+    return () => clearInterval(id)
+  }, [tripId, navigate])
 
   const routeIndex = useMemo(
     () => (trip?.routeGeojson ? buildRouteIndex(trip.routeGeojson) : null),

@@ -18,6 +18,7 @@ import {
   updateTripRoute,
 } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
+import { applyNeonStyle } from '../../map/neonStyle'
 import { useSession } from '../../session'
 
 const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
@@ -81,6 +82,7 @@ export default function RouteEditorScreen() {
     })
     map.on('load', () => {
       map.resize()
+      applyNeonStyle(map)
       map.addSource('preview', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },

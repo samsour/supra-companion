@@ -2,6 +2,7 @@ import type { Checkpoint, RouteGeometry } from '@supra/core'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useEffect, useRef, useState } from 'react'
+import { applyNeonStyle } from './neonStyle'
 
 const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
 const style =
@@ -100,6 +101,7 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
     }
     map.on('load', () => {
       map.resize() // in case the container was still settling during init
+      applyNeonStyle(map)
       setLoaded(true)
     })
     mapRef.current = map
@@ -232,6 +234,26 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
     }
   }, [self?.lat, self?.lng, self?.heading, loaded, follow])
 
+  const showAll = () => {
+    const map = mapRef.current
+    const entries = [...carsRef.current.values()]
+    if (!map || entries.length === 0) return
+    const first = entries[0]!
+    const bounds = new mapboxgl.LngLatBounds(
+      [first.target.lng, first.target.lat],
+      [first.target.lng, first.target.lat],
+    )
+    for (const e of entries) bounds.extend([e.target.lng, e.target.lat])
+    followRef.current = false
+    setFollow(false)
+    if (idleTimerRef.current !== null) window.clearTimeout(idleTimerRef.current)
+    idleTimerRef.current = window.setTimeout(() => {
+      followRef.current = true
+      setFollow(true)
+    }, 10_000)
+    map.fitBounds(bounds, { padding: 70, maxZoom: 14, bearing: 0, duration: 800 })
+  }
+
   if (!token) {
     return (
       <div className="map-placeholder">
@@ -243,6 +265,9 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
   return (
     <div className="map-wrap">
       <div ref={containerRef} className="map-canvas" />
+      <button className="overview-btn" onClick={showAll}>
+        ⛶ All
+      </button>
       {!follow && (
         <button className="recenter-btn" onClick={enableFollow}>
           ⌖ Follow

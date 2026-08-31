@@ -369,7 +369,7 @@ h1 .glow {
 .recenter-btn {
   position: absolute;
   right: 12px;
-  bottom: 12px;
+  bottom: 44px;
   z-index: 2;
   appearance: none;
   border: 1px solid var(--amber);
@@ -387,6 +387,31 @@ h1 .glow {
 }
 
 .recenter-btn:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.overview-btn {
+  position: absolute;
+  left: 12px;
+  bottom: 44px;
+  z-index: 2;
+  appearance: none;
+  border: 1px solid var(--line);
+  background: rgba(11, 14, 20, 0.85);
+  color: var(--muted);
+  font-family: var(--disp);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 8px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.overview-btn:focus-visible {
   outline: 2px solid var(--amber);
   outline-offset: 2px;
 }
