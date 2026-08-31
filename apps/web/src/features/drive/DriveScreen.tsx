@@ -74,6 +74,15 @@ export default function DriveScreen() {
     return () => clearInterval(id)
   }, [])
 
+  // fullscreen HUD: the page itself must never scroll while driving
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = prev
+    }
+  }, [])
+
   const wakeLockHeld = useWakeLock(true)
   const { peers, publish, connected } = useConvoyChannel(tripId ?? '', userId)
 
