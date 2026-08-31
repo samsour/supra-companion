@@ -211,104 +211,96 @@ export default function DriveScreen() {
   if (!tripId) return null
 
   return (
-    <div className="screen">
-      <header className="row">
-        <div>
-          <div className="eyebrow">{trip?.name ?? 'Drive mode'}</div>
-          <h1 className="display" style={{ fontSize: 26 }}>
-            {me?.position ? <span className="pos-p">P{me.position}</span> : me?.offRoute ? <span className="gap-off">Off route</span> : 'Convoy'}
-            {me?.gapAheadSec != null && <span style={{ color: 'var(--muted)', marginLeft: 10 }}>{formatGap(me.gapAheadSec)} ahead</span>}
-          </h1>
-        </div>
-        <span className={trip?.status === 'live' ? 'badge badge-live' : 'badge'}>
-          {connected ? (trip?.status ?? '…') : 'offline'}
-        </span>
-      </header>
-
-      <div className="stat-grid">
-        <div className="stat hero">
-          <div className="label">Speed</div>
-          <div className="value">
-            {speedKmh != null ? Math.round(speedKmh) : '—'}
-            <small>km/h</small>
-          </div>
-        </div>
-        <div className="stat">
-          <div className="label">Trip distance</div>
-          <div className="value">
-            {(totals.distanceM / 1000).toFixed(1)}
-            <small>km</small>
-          </div>
-        </div>
-        <div className="stat">
-          <div className="label">Moving time</div>
-          <div className="value">
-            {Math.floor(totals.movingSecs / 60)}
-            <small>min</small>
-          </div>
-        </div>
-        <div className="stat">
-          <div className="label">Cars live</div>
-          <div className="value">
-            {livePeers.length + (latest ? 1 : 0)}
-            <small>/ {Math.max(members.length, livePeers.length + 1)}</small>
-          </div>
-        </div>
-      </div>
-
-      {nextCp && (
-        <div className="card next-cp">
-          <div className="row">
-            <span className="label">Next checkpoint</span>
-            <strong className="display" style={{ fontSize: 20 }}>
-              {{ fuel: '⛽', food: '🍔', photo: '📸', meet: '🏁' }[nextCp.kind]} {nextCp.name}
-            </strong>
-            <span className="display" style={{ fontSize: 24, color: 'var(--cyan)' }}>
-              {(nextCp.distanceM / 1000).toFixed(nextCp.distanceM < 10_000 ? 1 : 0)} km
-            </span>
-          </div>
-        </div>
-      )}
-
-      {convoy && convoy.length > 1 && (
-        <div className="card">
-          <div className="label">Convoy</div>
-          <div>
-            {convoy.map((e) => (
-              <div className="member" key={e.userId}>
-                <strong>
-                  {e.position ? <span className="pos-p">P{e.position} </span> : <span className="gap-off">⚑ </span>}
-                  {handleOf(e.userId)}
-                  {e.userId === userId ? ' (you)' : ''}
-                </strong>
-                <span className="car">
-                  {e.offRoute
-                    ? `off route · ${(e.offRouteM / 1000).toFixed(1)} km out`
-                    : e.gapAheadSec != null
-                      ? `${formatGap(e.gapAheadSec)} to ${handleOf(convoy.find((x) => x.position === (e.position ?? 0) - 1)?.userId ?? '')}`
-                      : 'leader'}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <Suspense fallback={<div className="map-placeholder">Loading map…</div>}>
+    <div className="drive-full">
+      <Suspense fallback={<div className="map-placeholder" style={{ position: 'absolute', inset: 0 }}>Loading map…</div>}>
         <ConvoyMap cars={cars} route={trip?.routeGeojson ?? null} checkpoints={checkpoints} />
       </Suspense>
 
-      {geoError && <div className="notice">GPS: {geoError}. Allow location access for this site.</div>}
-      {!wakeLockHeld && (
-        <div className="hint">
-          Screen may sleep — keep the app visible while driving so your position keeps broadcasting.
+      <div className="hud">
+        <div className="hud-section">
+          <div className="hud-top">
+            <div>
+              <div className="eyebrow">{trip?.name ?? 'Drive mode'}</div>
+              <h1 className="display hud-pos">
+                {me?.position ? <span className="pos-p">P{me.position}</span> : me?.offRoute ? <span className="gap-off">Off route</span> : 'Convoy'}
+                {me?.gapAheadSec != null && <span className="hud-gap">{formatGap(me.gapAheadSec)}</span>}
+              </h1>
+            </div>
+            <span className={trip?.status === 'live' ? 'badge badge-live' : 'badge'}>
+              {connected ? (trip?.status ?? '…') : 'offline'}
+            </span>
+          </div>
+          <div className="hud-tiles">
+            <div className="tile hero">
+              <div className="label">Speed</div>
+              <div className="value">
+                {speedKmh != null ? Math.round(speedKmh) : '—'}
+                <small>km/h</small>
+              </div>
+            </div>
+            <div className="tile">
+              <div className="label">Distance</div>
+              <div className="value">
+                {(totals.distanceM / 1000).toFixed(1)}
+                <small>km</small>
+              </div>
+            </div>
+            <div className="tile">
+              <div className="label">Moving</div>
+              <div className="value">
+                {Math.floor(totals.movingSecs / 60)}
+                <small>min</small>
+              </div>
+            </div>
+            <div className="tile">
+              <div className="label">Cars</div>
+              <div className="value">
+                {livePeers.length + (latest ? 1 : 0)}
+                <small>/ {Math.max(members.length, livePeers.length + 1)}</small>
+              </div>
+            </div>
+          </div>
         </div>
-      )}
-      {!routeIndex && <div className="hint">No route on this trip yet — positions and gaps unlock once the organizer adds one (Day 3).</div>}
 
-      <p className="hint">
-        <Link to={`/trip/${tripId}`} style={{ color: 'var(--cyan)' }}>← Back to lobby</Link>
-      </p>
+        <div className="hud-section hud-bottom">
+          {geoError && <div className="notice">GPS: {geoError}. Allow location access for this site.</div>}
+          {nextCp && (
+            <div className="tile hud-next">
+              <span className="label">Next</span>
+              <strong className="display">
+                {{ fuel: '⛽', food: '🍔', photo: '📸', meet: '🏁' }[nextCp.kind]} {nextCp.name}
+              </strong>
+              <span className="display" style={{ color: 'var(--cyan)' }}>
+                {(nextCp.distanceM / 1000).toFixed(nextCp.distanceM < 10_000 ? 1 : 0)} km
+              </span>
+            </div>
+          )}
+          {convoy && convoy.length > 1 && (
+            <div className="convoy-strip">
+              {convoy.map((e) => (
+                <span className="convoy-pos" key={e.userId}>
+                  {e.position ? (
+                    <span className="pos-p">P{e.position}</span>
+                  ) : (
+                    <span className="gap-off">⚑</span>
+                  )}{' '}
+                  {handleOf(e.userId)}
+                  {e.userId === userId ? ' •' : ''}
+                  {!e.offRoute && e.gapAheadSec != null && (
+                    <span className="convoy-gap">{formatGap(e.gapAheadSec)}</span>
+                  )}
+                  {e.offRoute && <span className="convoy-gap gap-off">off route</span>}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="hud-links">
+            <Link to={`/trip/${tripId}`}>← Lobby</Link>
+            {!routeIndex && <span className="hint">no route set</span>}
+            {!wakeLockHeld && <span className="hint">keep screen on while driving</span>}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

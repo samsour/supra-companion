@@ -416,6 +416,176 @@ h1 .glow {
   outline-offset: 2px;
 }
 
+/* ---------- fullscreen drive HUD ---------- */
+.drive-full {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--ground);
+}
+
+.drive-full .map-wrap {
+  position: absolute;
+  inset: 0;
+  border: none;
+  border-radius: 0;
+  min-height: 0;
+}
+
+.hud {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) calc(env(safe-area-inset-right, 0px) + 10px)
+    calc(env(safe-area-inset-bottom, 0px) + 10px) calc(env(safe-area-inset-left, 0px) + 10px);
+  pointer-events: none;
+}
+
+.hud a,
+.hud button,
+.hud .convoy-strip {
+  pointer-events: auto;
+}
+
+.hud-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.hud-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.85);
+}
+
+.hud-pos {
+  font-size: 30px;
+  margin: 0;
+}
+
+.hud-gap {
+  color: var(--text);
+  margin-left: 10px;
+  font-size: 22px;
+}
+
+.hud-tiles {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tile {
+  flex: 0 0 auto;
+  background: rgba(13, 18, 29, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 7px 12px 8px;
+}
+
+.tile .label {
+  font-size: 9.5px;
+}
+
+.tile .value {
+  font-family: var(--disp);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 26px;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile .value small {
+  font-size: 13px;
+  color: var(--muted);
+  margin-left: 3px;
+}
+
+.tile.hero .value {
+  font-size: 40px;
+  color: var(--amber);
+  text-shadow: 0 0 18px rgba(255, 160, 46, 0.35);
+}
+
+.hud-next {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  align-self: flex-start;
+}
+
+.hud-next .display {
+  font-size: 18px;
+}
+
+.convoy-strip {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  background: rgba(13, 18, 29, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  white-space: nowrap;
+  font-family: var(--disp);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.convoy-pos {
+  flex: 0 0 auto;
+}
+
+.convoy-gap {
+  color: var(--muted);
+  font-size: 13px;
+  margin-left: 6px;
+}
+
+.hud-links {
+  display: flex;
+  gap: 14px;
+  align-items: baseline;
+  font-size: 13px;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9);
+  /* clear of the Mapbox wordmark bottom-left */
+  padding-left: 96px;
+  min-height: 22px;
+}
+
+.hud-links a {
+  color: var(--cyan);
+}
+
+/* map controls sit clear of the bottom HUD in fullscreen mode */
+.drive-full .overview-btn {
+  left: auto;
+  right: 10px;
+  bottom: auto;
+  top: 45%;
+}
+
+.drive-full .recenter-btn {
+  right: 10px;
+  bottom: auto;
+  top: calc(45% + 52px);
+}
+
 .notice {
   border: 1px solid rgba(230, 83, 184, 0.5);
   background: rgba(230, 83, 184, 0.08);

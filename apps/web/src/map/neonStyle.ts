@@ -43,16 +43,16 @@ export function applyNeonStyle(map: mapboxgl.Map): void {
         map.setPaintProperty(id, 'line-color', '#ffffff')
         map.setPaintProperty(id, 'line-width', WIDTH_MAJOR)
       } else if (type === 'line' && /primary|major/.test(id)) {
-        map.setPaintProperty(id, 'line-color', '#aeb9c7')
+        map.setPaintProperty(id, 'line-color', '#e6ebf2')
         map.setPaintProperty(id, 'line-width', WIDTH_MID)
       } else if (type === 'line' && /secondary|tertiary/.test(id)) {
-        map.setPaintProperty(id, 'line-color', '#5a6577')
+        map.setPaintProperty(id, 'line-color', '#aab6c4')
         map.setPaintProperty(id, 'line-width', WIDTH_MINOR)
       } else if (
         type === 'line' &&
         /road|street|minor|tunnel|bridge|link/.test(id)
       ) {
-        map.setPaintProperty(id, 'line-color', '#414b5a')
+        map.setPaintProperty(id, 'line-color', '#8791a0')
         map.setPaintProperty(id, 'line-width', WIDTH_SMALL)
       } else if (type === 'symbol' && /poi|transit|airport|natural|water-point|golf/.test(id)) {
         map.setLayoutProperty(id, 'visibility', 'none') // minimap: no POI clutter
