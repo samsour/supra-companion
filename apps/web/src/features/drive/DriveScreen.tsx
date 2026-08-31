@@ -226,19 +226,20 @@ export default function DriveScreen() {
       </Suspense>
 
       <div className="hud">
-        <div className="hud-section">
-          <div className="hud-top">
-            <div>
-              <div className="eyebrow">{trip?.name ?? 'Drive mode'}</div>
-              <h1 className="display hud-pos">
-                {me?.position ? <span className="pos-p">P{me.position}</span> : me?.offRoute ? <span className="gap-off">Off route</span> : 'Convoy'}
-                {me?.gapAheadSec != null && <span className="hud-gap">{formatGap(me.gapAheadSec)}</span>}
-              </h1>
-            </div>
-            <span className={trip?.status === 'live' ? 'badge badge-live' : 'badge'}>
-              {connected ? (trip?.status ?? '…') : 'offline'}
-            </span>
+        <div className="hud-top">
+          <div>
+            <div className="eyebrow">{trip?.name ?? 'Drive mode'}</div>
+            <h1 className="display hud-pos">
+              {me?.position ? <span className="pos-p">P{me.position}</span> : me?.offRoute ? <span className="gap-off">Off route</span> : 'Convoy'}
+              {me?.gapAheadSec != null && <span className="hud-gap">{formatGap(me.gapAheadSec)}</span>}
+            </h1>
           </div>
+          <span className={trip?.status === 'live' ? 'badge badge-live' : 'badge'}>
+            {connected ? (trip?.status ?? '…') : 'offline'}
+          </span>
+        </div>
+
+        <div className="hud-mid">
           <div className="hud-tiles">
             <div className="tile hero">
               <div className="label">Speed</div>
@@ -269,6 +270,40 @@ export default function DriveScreen() {
               </div>
             </div>
           </div>
+
+          {convoy && convoy.length > 0 && (
+            <div className="leaderboard">
+              <div className="label">Convoy</div>
+              {convoy.map((e) => (
+                <div
+                  className={`lb-row${e.userId === userId ? ' lb-you' : ''}${e.offRoute ? ' lb-off' : ''}`}
+                  key={e.userId}
+                >
+                  <span className="lb-who">
+                    {e.position ? <span className="pos-p">P{e.position}</span> : <span className="gap-off">⚑</span>}{' '}
+                    {handleOf(e.userId)}
+                  </span>
+                  <span className="lb-gap">
+                    {e.offRoute
+                      ? 'off route'
+                      : e.position === 1
+                        ? 'leader'
+                        : e.gapAheadSec != null
+                          ? formatGap(e.gapAheadSec)
+                          : '—'}
+                  </span>
+                </div>
+              ))}
+              {members
+                .filter((m) => !convoy.some((e) => e.userId === m.userId))
+                .map((m) => (
+                  <div className="lb-row lb-offline" key={m.userId}>
+                    <span className="lb-who">– {m.handle}</span>
+                    <span className="lb-gap">offline</span>
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
 
         <div className="hud-section hud-bottom">
@@ -282,25 +317,6 @@ export default function DriveScreen() {
               <span className="display" style={{ color: 'var(--cyan)' }}>
                 {(nextCp.distanceM / 1000).toFixed(nextCp.distanceM < 10_000 ? 1 : 0)} km
               </span>
-            </div>
-          )}
-          {convoy && convoy.length > 1 && (
-            <div className="convoy-strip">
-              {convoy.map((e) => (
-                <span className="convoy-pos" key={e.userId}>
-                  {e.position ? (
-                    <span className="pos-p">P{e.position}</span>
-                  ) : (
-                    <span className="gap-off">⚑</span>
-                  )}{' '}
-                  {handleOf(e.userId)}
-                  {e.userId === userId ? ' •' : ''}
-                  {!e.offRoute && e.gapAheadSec != null && (
-                    <span className="convoy-gap">{formatGap(e.gapAheadSec)}</span>
-                  )}
-                  {e.offRoute && <span className="convoy-gap gap-off">off route</span>}
-                </span>
-              ))}
             </div>
           )}
           <div className="hud-links">

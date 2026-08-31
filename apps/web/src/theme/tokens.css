@@ -447,7 +447,7 @@ h1 .glow {
 
 .hud a,
 .hud button,
-.hud .convoy-strip {
+.hud .leaderboard {
   pointer-events: auto;
 }
 
@@ -477,11 +477,80 @@ h1 .glow {
   font-size: 22px;
 }
 
+.hud-mid {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1;
+  min-height: 0;
+  margin-top: 8px;
+  pointer-events: none;
+}
+
 .hud-tiles {
   display: flex;
+  flex-direction: column;
   gap: 8px;
-  overflow-x: auto;
+}
+
+.leaderboard {
+  pointer-events: auto;
+  background: rgba(13, 18, 29, 0.82);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 100%;
+  overflow-y: auto;
   scrollbar-width: none;
+  min-width: 150px;
+  max-width: 46vw;
+}
+
+.lb-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  font-family: var(--disp);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.lb-who {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lb-gap {
+  font-family: var(--body);
+  font-style: normal;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-you .lb-who {
+  color: var(--amber);
+}
+
+.lb-off .lb-gap {
+  color: var(--magenta);
+}
+
+.lb-offline {
+  opacity: 0.45;
 }
 
 .tile {
@@ -530,35 +599,6 @@ h1 .glow {
   font-size: 18px;
 }
 
-.convoy-strip {
-  display: flex;
-  gap: 14px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  background: rgba(13, 18, 29, 0.82);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  padding: 8px 12px;
-  white-space: nowrap;
-  font-family: var(--disp);
-  font-style: italic;
-  font-weight: 700;
-  font-size: 16px;
-  text-transform: uppercase;
-}
-
-.convoy-pos {
-  flex: 0 0 auto;
-}
-
-.convoy-gap {
-  color: var(--muted);
-  font-size: 13px;
-  margin-left: 6px;
-}
-
 .hud-links {
   display: flex;
   gap: 14px;
@@ -572,18 +612,16 @@ h1 .glow {
   color: var(--cyan);
 }
 
-/* map controls sit clear of the bottom HUD in fullscreen mode */
+/* map controls: bottom-right corner, clear of tiles and leaderboard */
 .drive-full .overview-btn {
   left: auto;
   right: 10px;
-  bottom: auto;
-  top: 45%;
+  bottom: 44px;
 }
 
 .drive-full .recenter-btn {
   right: 10px;
-  bottom: auto;
-  top: calc(45% + 52px);
+  bottom: 92px;
 }
 
 .notice {

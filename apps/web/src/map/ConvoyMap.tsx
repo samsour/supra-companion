@@ -247,11 +247,15 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
     const map = mapRef.current
     if (!map || !loaded || !followRef.current || !self) return
     const bearing = self.heading ?? map.getBearing()
+    // push own car toward the lower third of the screen so most of the
+    // viewport shows the road ahead (course-up: ahead = up)
+    const offsetY = map.getContainer().clientHeight * 0.28
     map.easeTo({
       center: [self.lng, self.lat],
       zoom: FOLLOW_ZOOM,
       pitch: FOLLOW_PITCH,
       bearing,
+      offset: [0, offsetY],
       duration: 900,
     })
   }, [self?.lat, self?.lng, self?.heading, loaded, follow])
