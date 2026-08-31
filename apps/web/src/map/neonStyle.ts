@@ -32,6 +32,9 @@ export function applyNeonStyle(map: mapboxgl.Map): void {
         map.setPaintProperty(id, 'fill-color', '#333f4c')
       } else if (type === 'fill' && /land|landuse|landcover|national-park|pitch|sand/.test(id)) {
         map.setPaintProperty(id, 'fill-color', '#10151c')
+      } else if (/path|pedestrian|steps|sidewalk|crossing|cycle|footway|piste|golf|ferry|aerialway|trail/.test(id)) {
+        // car-only map: no bike/foot/ski/ferry ways at all
+        map.setLayoutProperty(id, 'visibility', 'none')
       } else if (type === 'line' && /case|casing/.test(id)) {
         // casings become thin dark seams so parallel roads stay separable
         map.setPaintProperty(id, 'line-color', '#0a0d12')
@@ -47,7 +50,7 @@ export function applyNeonStyle(map: mapboxgl.Map): void {
         map.setPaintProperty(id, 'line-width', WIDTH_MINOR)
       } else if (
         type === 'line' &&
-        /road|street|minor|tunnel|bridge|link|pedestrian|path/.test(id)
+        /road|street|minor|tunnel|bridge|link/.test(id)
       ) {
         map.setPaintProperty(id, 'line-color', '#414b5a')
         map.setPaintProperty(id, 'line-width', WIDTH_SMALL)
