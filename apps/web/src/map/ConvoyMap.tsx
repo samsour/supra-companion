@@ -24,6 +24,9 @@ interface Props {
   checkpoints: Checkpoint[]
 }
 
+/** camera zoom while following own car — follow always returns to this */
+const FOLLOW_ZOOM = 16
+
 const PEER_COLORS = ['#35e0f2', '#e653b8', '#7cff6b', '#ffd02e', '#9d7bff', '#ff6b5e']
 const colorFor = (userId: string) => {
   let h = 0
@@ -65,7 +68,6 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
   const cpMarkersRef = useRef<mapboxgl.Marker[]>([])
   const [follow, setFollow] = useState(true)
   const followRef = useRef(true)
-  const zoomedRef = useRef(false)
   const idleTimerRef = useRef<number | null>(null)
 
   const enableFollow = () => {
@@ -220,18 +222,15 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
     return () => cancelAnimationFrame(raf)
   }, [loaded])
 
-  // --- camera follows own car, course-up: your heading is always screen-top ---
+  // --- camera follows own car, course-up: your heading is always screen-top.
+  // Follow enforces FOLLOW_ZOOM, so manual pan/zoom is fully restored
+  // (center, bearing, and zoom) when idle recenter kicks back in.
   const self = cars.find((c) => c.isSelf)
   useEffect(() => {
     const map = mapRef.current
     if (!map || !loaded || !followRef.current || !self) return
     const bearing = self.heading ?? map.getBearing()
-    if (!zoomedRef.current) {
-      zoomedRef.current = true
-      map.easeTo({ center: [self.lng, self.lat], zoom: 14, bearing, duration: 1200 })
-    } else {
-      map.easeTo({ center: [self.lng, self.lat], bearing, duration: 900 })
-    }
+    map.easeTo({ center: [self.lng, self.lat], zoom: FOLLOW_ZOOM, bearing, duration: 900 })
   }, [self?.lat, self?.lng, self?.heading, loaded, follow])
 
   const showAll = () => {
