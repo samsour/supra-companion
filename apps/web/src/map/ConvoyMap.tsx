@@ -37,29 +37,31 @@ const colorFor = (userId: string) => {
 }
 
 interface CarMarker {
-  marker: mapboxgl.Marker
-  root: HTMLDivElement
-  arrow: HTMLDivElement
+  /** the arrow — lies flat on the map plane, rotates in map space */
+  arrowMarker: mapboxgl.Marker
+  /** the name tag — separate screen-aligned marker so it stays readable; null for self */
+  labelMarker: mapboxgl.Marker | null
+  arrowRoot: HTMLDivElement
+  labelEl: HTMLDivElement | null
   cur: { lat: number; lng: number }
   target: { lat: number; lng: number }
   heading: number
 }
 
-function buildMarkerElement(car: CarPosition): { root: HTMLDivElement; arrow: HTMLDivElement } {
-  const root = document.createElement('div')
-  root.className = car.isSelf ? 'car-marker car-self' : 'car-marker'
-  root.style.setProperty('--car-color', car.isSelf ? '#ffa02e' : colorFor(car.userId))
+function buildCarElements(car: CarPosition): { arrowRoot: HTMLDivElement; labelEl: HTMLDivElement | null } {
+  const color = car.isSelf ? '#ffa02e' : colorFor(car.userId)
+  const arrowRoot = document.createElement('div')
+  arrowRoot.className = car.isSelf ? 'car-marker car-self' : 'car-marker'
+  arrowRoot.style.setProperty('--car-color', color)
   const arrow = document.createElement('div')
   arrow.className = 'car-arrow'
-  root.append(arrow)
-  if (!car.isSelf) {
-    // own arrow stays label-free — it's always the amber one
-    const label = document.createElement('div')
-    label.className = 'car-label'
-    label.textContent = car.handle
-    root.append(label)
-  }
-  return { root, arrow }
+  arrowRoot.append(arrow)
+  if (car.isSelf) return { arrowRoot, labelEl: null } // own arrow stays label-free
+  const labelEl = document.createElement('div')
+  labelEl.className = 'car-label'
+  labelEl.style.setProperty('--car-color', color)
+  labelEl.textContent = car.handle
+  return { arrowRoot, labelEl }
 }
 
 export default function ConvoyMap({ cars, route, checkpoints }: Props) {
@@ -175,14 +177,25 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
       seen.add(car.userId)
       let entry = carsRef.current.get(car.userId)
       if (!entry) {
-        const { root, arrow } = buildMarkerElement(car)
-        const marker = new mapboxgl.Marker({ element: root, anchor: 'center' })
+        const { arrowRoot, labelEl } = buildCarElements(car)
+        const arrowMarker = new mapboxgl.Marker({
+          element: arrowRoot,
+          anchor: 'center',
+          pitchAlignment: 'map',
+          rotationAlignment: 'map',
+        })
           .setLngLat([car.lng, car.lat])
           .addTo(map)
+        const labelMarker = labelEl
+          ? new mapboxgl.Marker({ element: labelEl, anchor: 'top', offset: [0, 14] })
+              .setLngLat([car.lng, car.lat])
+              .addTo(map)
+          : null
         entry = {
-          marker,
-          root,
-          arrow,
+          arrowMarker,
+          labelMarker,
+          arrowRoot,
+          labelEl,
           cur: { lat: car.lat, lng: car.lng },
           target: { lat: car.lat, lng: car.lng },
           heading: car.heading ?? 0,
@@ -190,12 +203,14 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
         carsRef.current.set(car.userId, entry)
       }
       entry.target = { lat: car.lat, lng: car.lng }
-      entry.root.classList.toggle('car-stale', car.stale)
+      entry.arrowRoot.classList.toggle('car-stale', car.stale)
+      entry.labelEl?.classList.toggle('car-stale', car.stale)
       if (car.heading !== null) entry.heading = car.heading
     }
     for (const [id, entry] of carsRef.current) {
       if (!seen.has(id)) {
-        entry.marker.remove()
+        entry.arrowMarker.remove()
+        entry.labelMarker?.remove()
         carsRef.current.delete(id)
       }
     }
@@ -210,13 +225,13 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
       const dt = Math.min(0.2, (now - last) / 1000)
       last = now
       const alpha = 1 - Math.exp(-dt * 2.5)
-      const bearing = mapRef.current?.getBearing() ?? 0
       for (const entry of carsRef.current.values()) {
         entry.cur.lat += (entry.target.lat - entry.cur.lat) * alpha
         entry.cur.lng += (entry.target.lng - entry.cur.lng) * alpha
-        entry.marker.setLngLat([entry.cur.lng, entry.cur.lat])
-        // arrows show true heading regardless of map rotation (course-up mode)
-        entry.arrow.style.transform = `rotate(${entry.heading - bearing}deg)`
+        entry.arrowMarker.setLngLat([entry.cur.lng, entry.cur.lat])
+        // map-space rotation: mapbox folds bearing/pitch in via the marker transform
+        entry.arrowMarker.setRotation(entry.heading)
+        entry.labelMarker?.setLngLat([entry.cur.lng, entry.cur.lat])
       }
       raf = requestAnimationFrame(tick)
     }
