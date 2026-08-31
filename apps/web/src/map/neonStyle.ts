@@ -8,8 +8,9 @@ type WidthExpression = mapboxgl.ExpressionSpecification
 const zoomWidth = (stops: [number, number][]): WidthExpression =>
   ['interpolate', ['exponential', 1.4], ['zoom'], ...stops.flat()] as unknown as WidthExpression
 const WIDTH_MAJOR = zoomWidth([[5, 1.5], [10, 4], [14, 12], [16, 22], [18, 44]])
-const WIDTH_MID = zoomWidth([[5, 1], [10, 2.5], [14, 8], [16, 14], [18, 30]])
-const WIDTH_MINOR = zoomWidth([[10, 0.5], [14, 4], [16, 8], [18, 18]])
+const WIDTH_MID = zoomWidth([[5, 1], [10, 2.5], [14, 7], [16, 12], [18, 26]])
+const WIDTH_MINOR = zoomWidth([[10, 0.6], [14, 4], [16, 7], [18, 15]])
+const WIDTH_SMALL = zoomWidth([[10, 0.4], [14, 2.5], [16, 4.5], [18, 10]])
 
 /**
  * NFS-minimap look, applied at runtime over stock dark-v11: near-black
@@ -35,17 +36,21 @@ export function applyNeonStyle(map: mapboxgl.Map): void {
         // casings become thin dark seams so parallel roads stay separable
         map.setPaintProperty(id, 'line-color', '#0a0d12')
       } else if (type === 'line' && /motorway|trunk/.test(id)) {
+        // only the big roads scream — everything below fades into the ground
         map.setPaintProperty(id, 'line-color', '#ffffff')
         map.setPaintProperty(id, 'line-width', WIDTH_MAJOR)
-      } else if (type === 'line' && /primary|secondary|major/.test(id)) {
-        map.setPaintProperty(id, 'line-color', '#e6ebf1')
+      } else if (type === 'line' && /primary|major/.test(id)) {
+        map.setPaintProperty(id, 'line-color', '#aeb9c7')
         map.setPaintProperty(id, 'line-width', WIDTH_MID)
+      } else if (type === 'line' && /secondary|tertiary/.test(id)) {
+        map.setPaintProperty(id, 'line-color', '#5a6577')
+        map.setPaintProperty(id, 'line-width', WIDTH_MINOR)
       } else if (
         type === 'line' &&
-        /road|street|minor|tertiary|tunnel|bridge|link|pedestrian|path/.test(id)
+        /road|street|minor|tunnel|bridge|link|pedestrian|path/.test(id)
       ) {
-        map.setPaintProperty(id, 'line-color', '#aab5c2')
-        map.setPaintProperty(id, 'line-width', WIDTH_MINOR)
+        map.setPaintProperty(id, 'line-color', '#414b5a')
+        map.setPaintProperty(id, 'line-width', WIDTH_SMALL)
       } else if (type === 'symbol' && /poi|transit|airport|natural|water-point|golf/.test(id)) {
         map.setLayoutProperty(id, 'visibility', 'none') // minimap: no POI clutter
       } else if (type === 'symbol') {
