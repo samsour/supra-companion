@@ -92,14 +92,14 @@ export default function RouteEditorScreen() {
         type: 'line',
         source: 'preview',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#35e0f2', 'line-width': 12, 'line-blur': 10, 'line-opacity': 0.55 },
+        paint: { 'line-color': '#1f51ff', 'line-width': 18, 'line-blur': 12, 'line-opacity': 0.7 },
       })
       map.addLayer({
         id: 'preview-core',
         type: 'line',
         source: 'preview',
         layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': '#b7f6ff', 'line-width': 2.5 },
+        paint: { 'line-color': '#4d8dff', 'line-width': 5 },
       })
       setLoaded(true)
     })
