@@ -422,10 +422,11 @@ export default function RouteEditorScreen() {
         >
           GPX
         </button>
+        {/* kein accept-Attribut: iOS kennt für .gpx keinen Dateityp und würde
+            die Dateien im Picker sonst ausgrauen — der Parser validiert selbst */}
         <input
           ref={fileInputRef}
           type="file"
-          accept=".gpx,application/gpx+xml"
           hidden
           onChange={(e) => {
             const f = e.target.files?.[0]
