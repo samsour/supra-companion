@@ -176,6 +176,26 @@ export async function fetchDirections(
   return { geometry: body.routes[0].geometry, distanceM: body.routes[0].distance }
 }
 
+export interface PlaceHit {
+  name: string
+  lng: number
+  lat: number
+}
+
+/** Mapbox geocoding — used to recenter the route editor map. */
+export async function searchPlaces(query: string): Promise<PlaceHit[]> {
+  const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
+  if (!token) throw new Error('VITE_MAPBOX_TOKEN fehlt')
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json?access_token=${token}&limit=5&language=de`
+  const res = await fetch(url)
+  const body = (await res.json()) as {
+    features?: { place_name: string; center: [number, number] }[]
+    message?: string
+  }
+  if (!res.ok) throw new Error(body.message ?? `Suche fehlgeschlagen (${res.status})`)
+  return (body.features ?? []).map((f) => ({ name: f.place_name, lng: f.center[0], lat: f.center[1] }))
+}
+
 export async function setTripStatus(tripId: string, status: TripStatus): Promise<void> {
   const { error } = await supabase.from('trips').update({ status }).eq('id', tripId)
   if (error) throw error

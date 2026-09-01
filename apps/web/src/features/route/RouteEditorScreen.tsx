@@ -7,7 +7,7 @@ import {
 } from '@supra/core'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   addCheckpoint,
@@ -15,7 +15,9 @@ import {
   fetchDirections,
   getCheckpoints,
   getTrip,
+  searchPlaces,
   updateTripRoute,
+  type PlaceHit,
 } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { checkpointIcon, checkpointLabel } from '../../lib/labels'
@@ -51,6 +53,29 @@ export default function RouteEditorScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [dirty, setDirty] = useState(false)
+  const [query, setQuery] = useState('')
+  const [hits, setHits] = useState<PlaceHit[]>([])
+  const [searching, setSearching] = useState(false)
+
+  const search = async (e: FormEvent) => {
+    e.preventDefault()
+    if (!query.trim()) return
+    setSearching(true)
+    try {
+      setHits(await searchPlaces(query.trim()))
+      setError(null)
+    } catch (err) {
+      setError(errorMessage(err))
+    } finally {
+      setSearching(false)
+    }
+  }
+
+  const goToPlace = (h: PlaceHit) => {
+    setHits([])
+    setQuery('')
+    mapRef.current?.flyTo({ center: [h.lng, h.lat], zoom: 12, duration: 1200 })
+  }
 
   const refreshCheckpoints = useCallback(() => {
     if (tripId) void getCheckpoints(tripId).then(setCheckpoints).catch(() => {})
@@ -288,6 +313,28 @@ export default function RouteEditorScreen() {
           ? 'Tippe auf die Karte, um Wegpunkte zu setzen — die Route folgt automatisch den Straßen.'
           : 'Tippe auf die Karte, um einen Stopp zu setzen (Tanken, Essen, Foto, Treffpunkt). Pin antippen zum Entfernen.'}
       </p>
+
+      <form className="search-row" onSubmit={search}>
+        <input
+          className="input"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Ort suchen — z.B. Berchtesgaden"
+          autoCorrect="off"
+        />
+        <button className="btn" style={{ width: 'auto' }} disabled={searching || !query.trim()}>
+          {searching ? '…' : '🔍'}
+        </button>
+      </form>
+      {hits.length > 0 && (
+        <div className="card" style={{ padding: '4px 14px' }}>
+          {hits.map((h) => (
+            <button className="recent-row" key={`${h.lng},${h.lat}`} onClick={() => goToPlace(h)}>
+              {h.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {!token ? (
         <div className="map-placeholder">Set VITE_MAPBOX_TOKEN in apps/web/.env to enable the map</div>

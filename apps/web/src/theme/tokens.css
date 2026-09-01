@@ -249,6 +249,15 @@ h1 .glow {
   outline-offset: 2px;
 }
 
+.search-row {
+  display: flex;
+  gap: 8px;
+}
+
+.search-row .input {
+  flex: 1;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
