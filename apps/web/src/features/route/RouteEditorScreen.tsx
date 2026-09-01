@@ -23,6 +23,7 @@ import {
   type PlaceHit,
 } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
+import { asCoordinate, isGoogleMapsLink, parseGoogleMapsLink } from '../../lib/googleMaps'
 import { parseGpx } from '../../lib/gpx'
 import { checkpointIcon, checkpointLabel, stopIcon } from '../../lib/labels'
 import { applyNeonStyle } from '../../map/neonStyle'
@@ -145,12 +146,38 @@ export default function RouteEditorScreen() {
     }
   }
 
+  /** Google-Routenlink → Wegpunkte (Namen werden geocodiert) */
+  const importGoogleLink = async (link: string) => {
+    const segments = parseGoogleMapsLink(link)
+    if (segments.length > 25) throw new Error('Zu viele Ziele im Link (max. 25)')
+    const points: [number, number][] = []
+    for (const seg of segments) {
+      const coord = asCoordinate(seg)
+      if (coord) {
+        points.push(coord)
+        continue
+      }
+      const hit = (await searchPlaces(seg))[0]
+      if (!hit) throw new Error(`Ort nicht gefunden: "${seg}"`)
+      points.push([hit.lng, hit.lat])
+    }
+    setWaypoints(points)
+    setDirty(true)
+    fittedRef.current = false
+    setQuery('')
+  }
+
   const search = async (e: FormEvent) => {
     e.preventDefault()
-    if (!query.trim()) return
+    const q = query.trim()
+    if (!q) return
     setSearching(true)
     try {
-      setHits(await searchPlaces(query.trim()))
+      if (isGoogleMapsLink(q)) {
+        await importGoogleLink(q)
+      } else {
+        setHits(await searchPlaces(q))
+      }
       setError(null)
     } catch (err) {
       setError(errorMessage(err))
@@ -446,7 +473,7 @@ export default function RouteEditorScreen() {
           className="input"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Ort suchen — z.B. Berchtesgaden"
+          placeholder="Ort suchen oder Google-Maps-Link einfügen"
           autoCorrect="off"
         />
         <button className="btn" style={{ width: 'auto' }} disabled={searching || !query.trim()}>
