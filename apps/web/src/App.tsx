@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import DriveScreen from './features/drive/DriveScreen'
 import JoinScreen from './features/join/JoinScreen'
 import LobbyScreen from './features/lobby/LobbyScreen'
+import ProfileScreen from './features/profile/ProfileScreen'
 import ResultsScreen from './features/results/ResultsScreen'
 import { SessionProvider } from './session'
 
@@ -16,6 +17,7 @@ export default function App() {
           <Routes>
             <Route path="/" element={<JoinScreen />} />
             <Route path="/join/:code" element={<JoinScreen />} />
+            <Route path="/profile" element={<ProfileScreen />} />
             <Route path="/trip/:tripId" element={<LobbyScreen />} />
             <Route path="/trip/:tripId/route" element={<RouteEditorScreen />} />
             <Route path="/trip/:tripId/results" element={<ResultsScreen />} />

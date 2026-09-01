@@ -1,31 +1,38 @@
-import { useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
-import { ACCENTS, DEFAULT_ACCENT, applyAccent } from '../../lib/accent'
-import { createTrip, joinTrip, loadProfile, saveProfile } from '../../lib/api'
+import { useEffect, useState, type FormEvent } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { createTrip, joinTrip, loadProfile } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { statusLabel } from '../../lib/labels'
 import { forgetTrip, loadRecentTrips } from '../../lib/recentTrips'
 
 type Mode = 'join' | 'create'
 
+/** Hauptmenü: Trip beitreten / erstellen + zuletzt besuchte Trips.
+ *  Ohne lokales Profil geht es erst durchs Onboarding (/profile). */
 export default function JoinScreen() {
   const navigate = useNavigate()
-  // deep link from a shared invite: /join/CODE prefills the code
+  const location = useLocation()
   const { code: codeParam } = useParams<{ code?: string }>()
   const [mode, setMode] = useState<Mode>('join')
-  const [profile, setProfile] = useState(loadProfile)
   const [tripName, setTripName] = useState('')
   const [code, setCode] = useState(() => codeParam?.toUpperCase() ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [recent, setRecent] = useState(loadRecentTrips)
 
+  useEffect(() => {
+    if (!loadProfile().handle) {
+      navigate(`/profile?next=${encodeURIComponent(location.pathname)}`, { replace: true })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const submit = async (e: FormEvent) => {
     e.preventDefault()
     setBusy(true)
     setError(null)
     try {
-      saveProfile(profile)
+      const profile = loadProfile()
       const tripId =
         mode === 'create' ? await createTrip(tripName, profile) : await joinTrip(code, profile)
       navigate(`/trip/${tripId}`)
@@ -38,11 +45,16 @@ export default function JoinScreen() {
 
   return (
     <div className="screen">
-      <header>
-        <div className="eyebrow">Roadtrip-Begleiter</div>
-        <h1 className="display">
-          Supra <span className="glow">Companion</span>
-        </h1>
+      <header className="row" style={{ alignItems: 'flex-start' }}>
+        <div>
+          <div className="eyebrow">Roadtrip-Begleiter</div>
+          <h1 className="display">
+            Supra <span className="glow">Companion</span>
+          </h1>
+        </div>
+        <button className="user-chip" aria-label="Profil bearbeiten" onClick={() => navigate('/profile')}>
+          ▲
+        </button>
       </header>
 
       {recent.length > 0 && (
@@ -113,56 +125,6 @@ export default function JoinScreen() {
             />
           </div>
         )}
-
-        <div>
-          <div className="label">Dein Name</div>
-          <input
-            className="input"
-            value={profile.handle}
-            onChange={(e) => setProfile({ ...profile, handle: e.target.value })}
-            placeholder="SAM"
-            required
-          />
-        </div>
-        <div>
-          <div className="label">Auto</div>
-          <input
-            className="input"
-            value={profile.carModel}
-            onChange={(e) => setProfile({ ...profile, carModel: e.target.value })}
-            placeholder="A90 · Mk4 · Mk3 …"
-          />
-        </div>
-        <div>
-          <div className="label">Farbe</div>
-          <input
-            className="input"
-            value={profile.carColor}
-            onChange={(e) => setProfile({ ...profile, carColor: e.target.value })}
-            placeholder="Renaissance Red"
-          />
-        </div>
-        <div>
-          <div className="label">Deine Neonfarbe — App-Akzent & dein Pfeil im Konvoi</div>
-          <div className="swatch-row">
-            {ACCENTS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                className="swatch"
-                style={{ '--swatch': c } as React.CSSProperties}
-                aria-label={`Akzentfarbe ${c}`}
-                aria-pressed={(profile.accent ?? DEFAULT_ACCENT) === c}
-                onClick={() => {
-                  const next = { ...profile, accent: c }
-                  setProfile(next)
-                  saveProfile(next)
-                  applyAccent(c)
-                }}
-              />
-            ))}
-          </div>
-        </div>
 
         {error && <div className="notice">{error}</div>}
         <button className="btn btn-primary" disabled={busy}>
