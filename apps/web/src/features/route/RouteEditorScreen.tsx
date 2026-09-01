@@ -386,7 +386,7 @@ export default function RouteEditorScreen() {
               </button>
             ))}
           </div>
-          <div className="row">
+          <div className="btn-row">
             <button className="btn" onClick={() => setPendingCp(null)}>Abbrechen</button>
             <button className="btn btn-primary" disabled={busy || !cpName.trim()} onClick={saveCp}>
               Hinzufügen
@@ -428,7 +428,7 @@ export default function RouteEditorScreen() {
 
       {error && <div className="notice">{error}</div>}
 
-      <div className="row">
+      <div className="btn-row">
         <button
           className="btn"
           disabled={waypoints.length === 0}
