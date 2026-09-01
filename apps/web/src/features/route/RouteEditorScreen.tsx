@@ -21,6 +21,7 @@ import {
   type PlaceHit,
 } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
+import { parseGpx } from '../../lib/gpx'
 import { checkpointIcon, checkpointLabel } from '../../lib/labels'
 import { applyNeonStyle } from '../../map/neonStyle'
 import { useSession } from '../../session'
@@ -57,6 +58,54 @@ export default function RouteEditorScreen() {
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<PlaceHit[]>([])
   const [searching, setSearching] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  // true when the preview came from an import (no waypoints backing it)
+  const importedRef = useRef(false)
+  useEffect(() => {
+    importedRef.current = waypoints.length === 0 && preview !== null
+  }, [waypoints, preview])
+
+  const moveWaypoint = (i: number, dir: -1 | 1) => {
+    const t = i + dir
+    if (t < 0 || t >= waypoints.length) return
+    setWaypoints((prev) => {
+      const n = [...prev]
+      ;[n[i], n[t]] = [n[t]!, n[i]!]
+      return n
+    })
+    setDirty(true)
+  }
+
+  const removeWaypoint = (i: number) => {
+    setWaypoints((prev) => prev.filter((_, idx) => idx !== i))
+    setDirty(true)
+  }
+
+  const importGpx = async (file: File) => {
+    try {
+      const { coordinates, stopps } = parseGpx(await file.text())
+      const geometry: RouteGeometry = { type: 'LineString', coordinates }
+      setWaypoints([])
+      setDirty(false)
+      setPreview({ geometry, distanceM: buildRouteIndex(geometry).totalM })
+      fittedRef.current = false
+      if (tripId && stopps.length > 0) {
+        for (const [i, s] of stopps.entries()) {
+          await addCheckpoint(tripId, {
+            name: s.name,
+            kind: 'meet',
+            lat: s.lat,
+            lng: s.lng,
+            orderIdx: checkpoints.length + i,
+          })
+        }
+        refreshCheckpoints()
+      }
+      setError(null)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
 
   const search = async (e: FormEvent) => {
     e.preventDefault()
@@ -173,6 +222,12 @@ export default function RouteEditorScreen() {
     const onClick = (e: mapboxgl.MapMouseEvent) => {
       const { lng, lat } = e.lngLat
       if (modeRef.current === 'route') {
+        if (
+          importedRef.current &&
+          !window.confirm('Importierte Route verwerfen und neu mit Wegpunkten planen?')
+        ) {
+          return
+        }
         setWaypoints((prev) => [...prev, [lng, lat]])
         setDirty(true)
       } else {
@@ -223,7 +278,15 @@ export default function RouteEditorScreen() {
       const el = document.createElement('div')
       el.className = 'wp-marker'
       el.textContent = String(i + 1)
-      wpMarkersRef.current.push(new mapboxgl.Marker({ element: el }).setLngLat([lng, lat]).addTo(map))
+      const marker = new mapboxgl.Marker({ element: el, draggable: true })
+        .setLngLat([lng, lat])
+        .addTo(map)
+      marker.on('dragend', () => {
+        const p = marker.getLngLat()
+        setWaypoints((prev) => prev.map((w, idx) => (idx === i ? [p.lng, p.lat] : w)))
+        setDirty(true)
+      })
+      wpMarkersRef.current.push(marker)
     }
     return () => {
       wpMarkersRef.current.forEach((m) => m.remove())
@@ -335,7 +398,7 @@ export default function RouteEditorScreen() {
       </div>
       <p className="hint" style={{ margin: 0 }}>
         {mode === 'route'
-          ? 'Tippe auf die Karte, um Wegpunkte zu setzen — die Route folgt automatisch den Straßen.'
+          ? 'Tippe auf die Karte für Wegpunkte — die Route folgt den Straßen. Marker lassen sich ziehen.'
           : 'Tippe auf die Karte, um einen Stopp zu setzen (Tanken, Essen, Foto, Treffpunkt). Pin antippen zum Entfernen.'}
       </p>
 
@@ -350,6 +413,26 @@ export default function RouteEditorScreen() {
         <button className="btn" style={{ width: 'auto' }} disabled={searching || !query.trim()}>
           {searching ? '…' : '🔍'}
         </button>
+        <button
+          type="button"
+          className="btn"
+          style={{ width: 'auto' }}
+          onClick={() => fileInputRef.current?.click()}
+          title="GPX-Datei importieren (Komoot, Kurviger, Garmin, …)"
+        >
+          GPX
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".gpx,application/gpx+xml"
+          hidden
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) void importGpx(f)
+            e.target.value = ''
+          }}
+        />
       </form>
       {hits.length > 0 && (
         <div className="card" style={{ padding: '4px 14px' }}>
@@ -391,6 +474,37 @@ export default function RouteEditorScreen() {
             <button className="btn btn-primary" disabled={busy || !cpName.trim()} onClick={saveCp}>
               Hinzufügen
             </button>
+          </div>
+        </div>
+      )}
+
+      {waypoints.length > 0 && (
+        <div className="card">
+          <div className="label">Wegpunkte ({waypoints.length}) — Reihenfolge der Route</div>
+          <div>
+            {waypoints.map(([lng, lat], i) => (
+              <div className="cp-row" key={`${i}:${lng.toFixed(5)}:${lat.toFixed(5)}`}>
+                <span className="cp-row-name">
+                  <span className="cp-row-idx">{i + 1}</span> {lat.toFixed(4)}, {lng.toFixed(4)}
+                </span>
+                <span className="cp-row-actions">
+                  <button className="icon-btn" disabled={i === 0} onClick={() => moveWaypoint(i, -1)} aria-label="Wegpunkt nach oben">
+                    ↑
+                  </button>
+                  <button
+                    className="icon-btn"
+                    disabled={i === waypoints.length - 1}
+                    onClick={() => moveWaypoint(i, 1)}
+                    aria-label="Wegpunkt nach unten"
+                  >
+                    ↓
+                  </button>
+                  <button className="icon-btn icon-btn-danger" onClick={() => removeWaypoint(i)} aria-label="Wegpunkt entfernen">
+                    ✕
+                  </button>
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}
