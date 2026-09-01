@@ -3,7 +3,74 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { createTrip, joinTrip, loadProfile } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { statusLabel } from '../../lib/labels'
+import { canPromptInstall, getPlatform, isStandalone, promptInstall } from '../../lib/pwaInstall'
 import { forgetTrip, loadRecentTrips } from '../../lib/recentTrips'
+
+const INSTALL_HINT_KEY = 'supra.install-hint-dismissed'
+
+/** Hinweis + Anleitung, wenn die App im Browser statt vom Homescreen läuft. */
+function InstallHint() {
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return sessionStorage.getItem(INSTALL_HINT_KEY) === '1'
+    } catch {
+      return true
+    }
+  })
+  const [installed, setInstalled] = useState(isStandalone)
+  const platform = getPlatform()
+
+  useEffect(() => {
+    const onInstalled = () => setInstalled(true)
+    window.addEventListener('appinstalled', onInstalled)
+    return () => window.removeEventListener('appinstalled', onInstalled)
+  }, [])
+
+  if (installed || dismissed || platform === 'other') return null
+
+  const dismiss = () => {
+    setDismissed(true)
+    try {
+      sessionStorage.setItem(INSTALL_HINT_KEY, '1')
+    } catch {
+      /* egal */
+    }
+  }
+
+  return (
+    <div className="card install-hint">
+      <div className="row">
+        <span className="label">📲 Als App installieren — Vollbild, eigenes Icon, ein Tap</span>
+        <button className="icon-btn" aria-label="Hinweis schließen" onClick={dismiss}>✕</button>
+      </div>
+      {platform === 'ios' ? (
+        <ol className="install-steps">
+          <li>Diese Seite in <strong>Safari</strong> öffnen (falls du gerade woanders bist)</li>
+          <li>Teilen-Symbol antippen (Viereck mit Pfeil nach oben)</li>
+          <li><strong>„Zum Home-Bildschirm“</strong> wählen</li>
+          <li>Ab jetzt immer vom Homescreen starten</li>
+        </ol>
+      ) : canPromptInstall() ? (
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            void promptInstall().then((ok) => {
+              if (ok) setInstalled(true)
+            })
+          }}
+        >
+          Jetzt installieren
+        </button>
+      ) : (
+        <ol className="install-steps">
+          <li><strong>Chrome-Menü</strong> (⋮ oben rechts) öffnen</li>
+          <li><strong>„App installieren“</strong> bzw. „Zum Startbildschirm hinzufügen“ wählen</li>
+          <li>Ab jetzt immer vom Homescreen starten</li>
+        </ol>
+      )}
+    </div>
+  )
+}
 
 type Mode = 'join' | 'create'
 
@@ -56,6 +123,8 @@ export default function JoinScreen() {
           ▲
         </button>
       </header>
+
+      <InstallHint />
 
       {recent.length > 0 && (
         <div className="card">
