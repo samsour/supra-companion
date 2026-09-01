@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { createTrip, joinTrip, loadProfile, saveProfile } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { statusLabel } from '../../lib/labels'
-import { loadRecentTrips } from '../../lib/recentTrips'
+import { forgetTrip, loadRecentTrips } from '../../lib/recentTrips'
 
 type Mode = 'join' | 'create'
 
@@ -17,7 +17,7 @@ export default function JoinScreen() {
   const [code, setCode] = useState(() => codeParam?.toUpperCase() ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [recent] = useState(loadRecentTrips)
+  const [recent, setRecent] = useState(loadRecentTrips)
 
   const submit = async (e: FormEvent) => {
     e.preventDefault()
@@ -49,10 +49,22 @@ export default function JoinScreen() {
           <div className="label">Zuletzt dabei</div>
           <div>
             {recent.map((t) => (
-              <button className="recent-row" key={t.id} onClick={() => navigate(`/trip/${t.id}`)}>
-                <strong>{t.name}</strong>
-                <span className="car">{statusLabel[t.status]}</span>
-              </button>
+              <div className="recent-row" key={t.id}>
+                <button className="recent-open" onClick={() => navigate(`/trip/${t.id}`)}>
+                  <strong>{t.name}</strong>
+                  <span className="car">{statusLabel[t.status]}</span>
+                </button>
+                <button
+                  className="icon-btn icon-btn-danger"
+                  aria-label="aus Liste entfernen"
+                  onClick={() => {
+                    forgetTrip(t.id)
+                    setRecent(loadRecentTrips())
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
             ))}
           </div>
         </div>

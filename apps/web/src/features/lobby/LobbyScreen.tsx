@@ -2,6 +2,7 @@ import { buildRouteIndex, type Trip, type TripMember } from '@supra/core'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
+  deleteTrip,
   duplicateTrip,
   finishTrip,
   getMembers,
@@ -12,7 +13,7 @@ import {
 } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { statusLabel } from '../../lib/labels'
-import { rememberTrip } from '../../lib/recentTrips'
+import { forgetTrip, rememberTrip } from '../../lib/recentTrips'
 import { useSession } from '../../session'
 
 export default function LobbyScreen() {
@@ -101,6 +102,22 @@ export default function LobbyScreen() {
         carColor: me?.carColor ?? profile.carColor ?? '',
       })
       navigate(`/trip/${newId}`)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
+
+  const remove = async () => {
+    if (
+      !window.confirm(
+        `Trip "${trip?.name}" endgültig löschen? Route, Stopps und alle Statistiken gehen für alle verloren.`,
+      )
+    )
+      return
+    try {
+      await deleteTrip(tripId)
+      forgetTrip(tripId)
+      navigate('/')
     } catch (e) {
       setError(errorMessage(e))
     }
@@ -225,6 +242,10 @@ export default function LobbyScreen() {
       <p className="hint" style={{ margin: 0 }}>
         Kopiert Route und Stopps in einen neuen Trip — für Etappen, Vorlagen oder als Backup.
       </p>
+
+      {isOrganizer && (
+        <button className="btn btn-danger" onClick={remove}>Trip löschen</button>
+      )}
 
       <p className="hint">
         <Link to="/" style={{ color: 'var(--cyan)' }}>← Anderen Trip öffnen</Link>

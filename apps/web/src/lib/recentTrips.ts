@@ -21,6 +21,14 @@ export function loadRecentTrips(): RecentTrip[] {
   return []
 }
 
+export function forgetTrip(tripId: string): void {
+  try {
+    localStorage.setItem(KEY, JSON.stringify(loadRecentTrips().filter((t) => t.id !== tripId)))
+  } catch {
+    /* best effort */
+  }
+}
+
 export function rememberTrip(trip: { id: string; name: string; status: TripStatus }): void {
   try {
     const list = loadRecentTrips().filter((t) => t.id !== trip.id)

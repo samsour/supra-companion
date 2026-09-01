@@ -219,6 +219,12 @@ export async function searchPlaces(query: string): Promise<PlaceHit[]> {
   return (body.features ?? []).map((f) => ({ name: f.place_name, lng: f.center[0], lat: f.center[1] }))
 }
 
+/** Organizer only (RLS); cascades members, checkpoints, samples, stats. */
+export async function deleteTrip(tripId: string): Promise<void> {
+  const { error } = await supabase.from('trips').delete().eq('id', tripId)
+  if (error) throw error
+}
+
 export async function renameTrip(tripId: string, name: string): Promise<void> {
   const { error } = await supabase.from('trips').update({ name }).eq('id', tripId)
   if (error) throw error
