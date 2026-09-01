@@ -219,6 +219,11 @@ export async function searchPlaces(query: string): Promise<PlaceHit[]> {
   return (body.features ?? []).map((f) => ({ name: f.place_name, lng: f.center[0], lat: f.center[1] }))
 }
 
+export async function renameTrip(tripId: string, name: string): Promise<void> {
+  const { error } = await supabase.from('trips').update({ name }).eq('id', tripId)
+  if (error) throw error
+}
+
 export async function setTripStatus(tripId: string, status: TripStatus): Promise<void> {
   const { error } = await supabase.from('trips').update({ status }).eq('id', tripId)
   if (error) throw error

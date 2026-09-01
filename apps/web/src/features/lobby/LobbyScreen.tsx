@@ -1,7 +1,15 @@
 import { buildRouteIndex, type Trip, type TripMember } from '@supra/core'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { duplicateTrip, finishTrip, getMembers, getTrip, loadProfile, setTripStatus } from '../../lib/api'
+import {
+  duplicateTrip,
+  finishTrip,
+  getMembers,
+  getTrip,
+  loadProfile,
+  renameTrip,
+  setTripStatus,
+} from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { statusLabel } from '../../lib/labels'
 import { rememberTrip } from '../../lib/recentTrips'
@@ -15,6 +23,20 @@ export default function LobbyScreen() {
   const [members, setMembers] = useState<TripMember[]>([])
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
+
+  const saveName = async () => {
+    setEditingName(false)
+    const v = nameDraft.trim()
+    if (!trip || !v || v === trip.name) return
+    try {
+      await renameTrip(trip.id, v)
+      refresh()
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+  }
 
   const refresh = useCallback(() => {
     if (!tripId) return
@@ -97,9 +119,42 @@ export default function LobbyScreen() {
   return (
     <div className="screen">
       <header className="row">
-        <div>
+        <div style={{ minWidth: 0, flex: 1 }}>
           <div className="eyebrow">Lobby</div>
-          <h1 className="display" style={{ fontSize: 32 }}>{trip.name}</h1>
+          {editingName ? (
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                void saveName()
+              }}
+            >
+              <input
+                className="input"
+                value={nameDraft}
+                onChange={(e) => setNameDraft(e.target.value)}
+                onBlur={() => void saveName()}
+                aria-label="Trip-Name"
+                autoFocus
+              />
+            </form>
+          ) : (
+            <h1 className="display" style={{ fontSize: 32, margin: 0 }}>
+              {trip.name}
+              {isOrganizer && (
+                <button
+                  className="icon-btn"
+                  style={{ marginLeft: 10, verticalAlign: 'middle' }}
+                  aria-label="Namen bearbeiten"
+                  onClick={() => {
+                    setNameDraft(trip.name)
+                    setEditingName(true)
+                  }}
+                >
+                  ✎
+                </button>
+              )}
+            </h1>
+          )}
         </div>
         <span className={trip.status === 'live' ? 'badge badge-live' : 'badge'}>
           {statusLabel[trip.status]}
