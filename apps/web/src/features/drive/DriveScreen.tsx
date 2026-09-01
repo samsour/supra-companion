@@ -20,7 +20,8 @@ import {
 } from '@supra/core'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { getCheckpoints, getMembers, getTrip, insertSamples } from '../../lib/api'
+import { isValidAccent } from '../../lib/accent'
+import { getCheckpoints, getMembers, getTrip, insertSamples, loadProfile } from '../../lib/api'
 import { statusLabel, stopIcon } from '../../lib/labels'
 import { type CarPosition } from '../../map/ConvoyMap'
 
@@ -85,7 +86,11 @@ export default function DriveScreen() {
   }, [])
 
   const wakeLockHeld = useWakeLock(true)
-  const { peers, publish, connected } = useConvoyChannel(tripId ?? '', userId)
+  const myAccent = useMemo(() => {
+    const a = loadProfile().accent
+    return isValidAccent(a) ? a : undefined
+  }, [])
+  const { peers, publish, connected } = useConvoyChannel(tripId ?? '', userId, myAccent)
 
   const totalsRef = useRef(tripId ? loadTotals(tripId, userId) : emptyTotals())
   const pendingRef = useRef<LocationSample[]>([])
@@ -198,6 +203,7 @@ export default function DriveScreen() {
       lat: p.lat,
       lng: p.lng,
       heading: p.heading,
+      accent: p.accent ?? null,
       isSelf: false,
       stale: now - p.ts > STALE_AFTER_MS,
     }))
@@ -208,6 +214,7 @@ export default function DriveScreen() {
         lat: latest.lat,
         lng: latest.lng,
         heading: latest.heading,
+        accent: myAccent ?? null,
         isSelf: true,
         stale: false,
       })

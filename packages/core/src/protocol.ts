@@ -7,6 +7,8 @@ export const EVENT_POSITION = 'pos'
 
 export interface PositionPing extends LocationSample {
   userId: string
+  /** driver's chosen accent color (hex) for their marker; optional */
+  accent?: string | null
 }
 
 export const PING_INTERVAL_MOVING_MS = 4_000

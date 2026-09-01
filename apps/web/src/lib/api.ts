@@ -56,6 +56,8 @@ export interface ProfileInput {
   handle: string
   carModel: string
   carColor: string
+  /** gewählte Neon-Akzentfarbe (hex), themed App + eigenen Pfeil */
+  accent?: string
 }
 
 export async function createTrip(name: string, p: ProfileInput): Promise<string> {

@@ -2,6 +2,7 @@ import type { Checkpoint, RouteGeometry } from '@supra/core'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useEffect, useRef, useState } from 'react'
+import { isValidAccent } from '../lib/accent'
 import { stopIcon } from '../lib/labels'
 import { applyNeonStyle } from './neonStyle'
 
@@ -15,6 +16,8 @@ export interface CarPosition {
   lat: number
   lng: number
   heading: number | null
+  /** driver-chosen neon color; falls back to hash color / amber for self */
+  accent: string | null
   isSelf: boolean
   stale: boolean
 }
@@ -50,7 +53,11 @@ interface CarMarker {
 }
 
 function buildCarElements(car: CarPosition): { arrowRoot: HTMLDivElement; labelEl: HTMLDivElement | null } {
-  const color = car.isSelf ? '#ffa02e' : colorFor(car.userId)
+  const color = isValidAccent(car.accent)
+    ? car.accent
+    : car.isSelf
+      ? '#ffa02e'
+      : colorFor(car.userId)
   const arrowRoot = document.createElement('div')
   arrowRoot.className = car.isSelf ? 'car-marker car-self' : 'car-marker'
   arrowRoot.style.setProperty('--car-color', color)

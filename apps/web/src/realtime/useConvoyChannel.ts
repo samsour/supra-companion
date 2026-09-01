@@ -8,7 +8,7 @@ import { supabase } from '../lib/supabase'
  * else's latest. Private channel — authorized by the RLS policies on
  * realtime.messages (trip membership).
  */
-export function useConvoyChannel(tripId: string, userId: string) {
+export function useConvoyChannel(tripId: string, userId: string, accent?: string) {
   const [peers, setPeers] = useState<Record<string, PositionPing>>({})
   const [connected, setConnected] = useState(false)
   const channelRef = useRef<RealtimeChannel | null>(null)
@@ -27,7 +27,7 @@ export function useConvoyChannel(tripId: string, userId: string) {
       setConnected(status === 'SUBSCRIBED')
       // deliver the fix that arrived while we were still joining
       if (status === 'SUBSCRIBED' && queuedRef.current) {
-        const ping: PositionPing = { ...queuedRef.current, userId }
+        const ping: PositionPing = { ...queuedRef.current, userId, accent }
         queuedRef.current = null
         void ch.send({ type: 'broadcast', event: EVENT_POSITION, payload: ping })
       }
@@ -48,10 +48,10 @@ export function useConvoyChannel(tripId: string, userId: string) {
         queuedRef.current = s
         return
       }
-      const ping: PositionPing = { ...s, userId }
+      const ping: PositionPing = { ...s, userId, accent }
       void ch.send({ type: 'broadcast', event: EVENT_POSITION, payload: ping })
     },
-    [userId],
+    [userId, accent],
   )
 
   return { peers, publish, connected }

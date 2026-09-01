@@ -1,7 +1,11 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { applyAccent } from './lib/accent'
+import { loadProfile } from './lib/api'
 import './theme/tokens.css'
+
+applyAccent(loadProfile().accent)
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

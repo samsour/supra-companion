@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ACCENTS, DEFAULT_ACCENT, applyAccent } from '../../lib/accent'
 import { createTrip, joinTrip, loadProfile, saveProfile } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { statusLabel } from '../../lib/labels'
@@ -140,6 +141,27 @@ export default function JoinScreen() {
             onChange={(e) => setProfile({ ...profile, carColor: e.target.value })}
             placeholder="Renaissance Red"
           />
+        </div>
+        <div>
+          <div className="label">Deine Neonfarbe — App-Akzent & dein Pfeil im Konvoi</div>
+          <div className="swatch-row">
+            {ACCENTS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className="swatch"
+                style={{ '--swatch': c } as React.CSSProperties}
+                aria-label={`Akzentfarbe ${c}`}
+                aria-pressed={(profile.accent ?? DEFAULT_ACCENT) === c}
+                onClick={() => {
+                  const next = { ...profile, accent: c }
+                  setProfile(next)
+                  saveProfile(next)
+                  applyAccent(c)
+                }}
+              />
+            ))}
+          </div>
         </div>
 
         {error && <div className="notice">{error}</div>}
