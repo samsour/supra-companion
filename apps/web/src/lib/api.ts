@@ -156,6 +156,29 @@ export async function deleteCheckpoint(checkpointId: string): Promise<void> {
   if (error) throw error
 }
 
+/** Rewrite order_idx to match the given id order (organizer only, via RLS). */
+export async function setCheckpointOrder(ordered: Checkpoint[]): Promise<void> {
+  await Promise.all(
+    ordered.map(async (cp, i) => {
+      if (cp.orderIdx === i) return
+      const { error } = await supabase.from('checkpoints').update({ order_idx: i }).eq('id', cp.id)
+      if (error) throw error
+    }),
+  )
+}
+
+/** Copy route + checkpoints into a new trip; the caller becomes its organizer. */
+export async function duplicateTrip(tripId: string, p: ProfileInput): Promise<string> {
+  const { data, error } = await supabase.rpc('duplicate_trip', {
+    p_trip: tripId,
+    p_handle: p.handle,
+    p_car_model: p.carModel || null,
+    p_car_color: p.carColor || null,
+  })
+  if (error) throw error
+  return data as string
+}
+
 /** Mapbox Directions along the picked waypoints (driving profile). */
 export async function fetchDirections(
   waypoints: [number, number][],

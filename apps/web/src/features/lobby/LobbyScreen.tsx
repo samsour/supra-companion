@@ -1,7 +1,7 @@
 import { buildRouteIndex, type Trip, type TripMember } from '@supra/core'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { finishTrip, getMembers, getTrip, setTripStatus } from '../../lib/api'
+import { duplicateTrip, finishTrip, getMembers, getTrip, loadProfile, setTripStatus } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { statusLabel } from '../../lib/labels'
 import { rememberTrip } from '../../lib/recentTrips'
@@ -35,7 +35,7 @@ export default function LobbyScreen() {
   }, [refresh])
 
   if (!tripId) return null
-  if (error) return <div className="screen"><div className="notice">{error}</div></div>
+  if (error && !trip) return <div className="screen"><div className="notice">{error}</div></div>
   if (!trip) return <div className="splash">Trip wird geladen…</div>
 
   const isOrganizer = trip.organizerId === userId
@@ -65,6 +65,22 @@ export default function LobbyScreen() {
       }
     } catch {
       /* share sheet dismissed */
+    }
+  }
+
+  const duplicate = async () => {
+    if (!window.confirm('Route und Stopps in einen neuen Trip kopieren? Du wirst Organisator der Kopie.')) return
+    try {
+      const me = members.find((m) => m.userId === userId)
+      const profile = loadProfile()
+      const newId = await duplicateTrip(tripId, {
+        handle: me?.handle ?? profile.handle ?? 'FAHRER',
+        carModel: me?.carModel ?? profile.carModel ?? '',
+        carColor: me?.carColor ?? profile.carColor ?? '',
+      })
+      navigate(`/trip/${newId}`)
+    } catch (e) {
+      setError(errorMessage(e))
     }
   }
 
@@ -147,6 +163,13 @@ export default function LobbyScreen() {
           Ergebnis ansehen
         </button>
       )}
+
+      {error && <div className="notice">{error}</div>}
+
+      <button className="btn" onClick={duplicate}>Trip duplizieren</button>
+      <p className="hint" style={{ margin: 0 }}>
+        Kopiert Route und Stopps in einen neuen Trip — für Etappen, Vorlagen oder als Backup.
+      </p>
 
       <p className="hint">
         <Link to="/" style={{ color: 'var(--cyan)' }}>← Anderen Trip öffnen</Link>

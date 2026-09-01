@@ -16,6 +16,7 @@ import {
   getCheckpoints,
   getTrip,
   searchPlaces,
+  setCheckpointOrder,
   updateTripRoute,
   type PlaceHit,
 } from '../../lib/api'
@@ -69,6 +70,30 @@ export default function RouteEditorScreen() {
     } finally {
       setSearching(false)
     }
+  }
+
+  const moveCheckpoint = async (index: number, dir: -1 | 1) => {
+    const next = [...checkpoints]
+    const target = index + dir
+    if (target < 0 || target >= next.length) return
+    ;[next[index], next[target]] = [next[target]!, next[index]!]
+    setCheckpoints(next.map((cp, i) => ({ ...cp, orderIdx: i }))) // optimistic
+    try {
+      await setCheckpointOrder(next)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+    refreshCheckpoints()
+  }
+
+  const removeCheckpoint = async (cp: Checkpoint) => {
+    if (!window.confirm(`Stopp "${cp.name}" entfernen?`)) return
+    try {
+      await deleteCheckpoint(cp.id)
+    } catch (e) {
+      setError(errorMessage(e))
+    }
+    refreshCheckpoints()
   }
 
   const goToPlace = (h: PlaceHit) => {
@@ -366,6 +391,37 @@ export default function RouteEditorScreen() {
             <button className="btn btn-primary" disabled={busy || !cpName.trim()} onClick={saveCp}>
               Hinzufügen
             </button>
+          </div>
+        </div>
+      )}
+
+      {checkpoints.length > 0 && (
+        <div className="card">
+          <div className="label">Stopps ({checkpoints.length}) — Reihenfolge des Tages</div>
+          <div>
+            {checkpoints.map((cp, i) => (
+              <div className="cp-row" key={cp.id}>
+                <span className="cp-row-name">
+                  <span className="cp-row-idx">{i + 1}</span> {checkpointIcon[cp.kind]} {cp.name}
+                </span>
+                <span className="cp-row-actions">
+                  <button className="icon-btn" disabled={i === 0} onClick={() => moveCheckpoint(i, -1)} aria-label="nach oben">
+                    ↑
+                  </button>
+                  <button
+                    className="icon-btn"
+                    disabled={i === checkpoints.length - 1}
+                    onClick={() => moveCheckpoint(i, 1)}
+                    aria-label="nach unten"
+                  >
+                    ↓
+                  </button>
+                  <button className="icon-btn icon-btn-danger" onClick={() => removeCheckpoint(cp)} aria-label="entfernen">
+                    ✕
+                  </button>
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       )}

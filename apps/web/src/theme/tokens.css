@@ -249,6 +249,64 @@ h1 .glow {
   outline-offset: 2px;
 }
 
+.cp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid var(--line-soft);
+  padding: 8px 2px;
+}
+
+.cp-row:last-child {
+  border-bottom: none;
+}
+
+.cp-row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-row-idx {
+  font-family: var(--disp);
+  font-style: italic;
+  font-weight: 700;
+  color: var(--amber);
+  margin-right: 4px;
+}
+
+.cp-row-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.icon-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel2);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.icon-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.icon-btn:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.icon-btn-danger {
+  color: var(--magenta);
+}
+
 .search-row {
   display: flex;
   gap: 8px;
