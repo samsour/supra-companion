@@ -69,20 +69,25 @@ export default function JoinScreen() {
 
       <form className="card" onSubmit={submit}>
         {mode === 'join' ? (
-          <div>
-            <div className="label">
-              {codeParam ? 'Du bist eingeladen — nur noch Name eintragen' : 'Einladungscode'}
+          codeParam ? (
+            <div className="row">
+              <div className="label">Du bist eingeladen · Code</div>
+              <span className="display" style={{ fontSize: 20, color: 'var(--cyan)' }}>{code} ✓</span>
             </div>
-            <input
-              className="input"
-              value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="6-stelliger Code aus dem Gruppenchat"
-              autoCapitalize="characters"
-              autoCorrect="off"
-              required
-            />
-          </div>
+          ) : (
+            <div>
+              <div className="label">Einladungscode</div>
+              <input
+                className="input"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="6-stelliger Code aus dem Gruppenchat"
+                autoCapitalize="characters"
+                autoCorrect="off"
+                required
+              />
+            </div>
+          )
         ) : (
           <div>
             <div className="label">Trip-Name</div>
