@@ -228,10 +228,7 @@ export default function DriveScreen() {
 
       <div className="hud">
         <div className="hud-top">
-          <div>
-            <div className="eyebrow">Roadtrip</div>
-            <h1 className="display hud-pos">{trip?.name ?? 'Drive Mode'}</h1>
-          </div>
+          <div className="eyebrow">{trip?.name ?? 'Drive Mode'}</div>
           <span className={trip?.status === 'live' ? 'badge badge-live' : 'badge'}>
             {connected ? (trip ? statusLabel[trip.status] : '…') : 'offline'}
           </span>
