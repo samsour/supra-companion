@@ -37,7 +37,7 @@ export default function ResultsScreen() {
   return (
     <div className="screen">
       <header>
-        <div className="eyebrow">Trip results</div>
+        <div className="eyebrow">Ergebnis</div>
         <h1 className="display" style={{ fontSize: 32 }}>{trip?.name ?? '…'}</h1>
       </header>
 
@@ -45,7 +45,7 @@ export default function ResultsScreen() {
       {!error && stats.length === 0 && (
         <div className="card">
           <p className="hint" style={{ margin: 0 }}>
-            No stats yet — they're computed when the organizer taps "Finish trip".
+            Noch keine Statistiken — sie werden berechnet, sobald der Organisator den Trip beendet.
           </p>
         </div>
       )}
@@ -59,26 +59,26 @@ export default function ResultsScreen() {
           <div className="row">
             <strong className="display" style={{ fontSize: 22 }}>
               <span className="pos-p">P{i + 1}</span> {handleOf(s.userId)}
-              {s.userId === userId ? ' (you)' : ''}
+              {s.userId === userId ? ' (du)' : ''}
             </strong>
             <span className="car">{carOf(s.userId)}</span>
           </div>
           <div className="stat-grid">
             <div className="stat">
-              <div className="label">Distance</div>
+              <div className="label">Strecke</div>
               <div className="value">{s.distanceKm.toFixed(1)}<small>km</small></div>
             </div>
             <div className="stat">
-              <div className="label">Moving time</div>
+              <div className="label">Fahrzeit</div>
               <div className="value" style={{ fontSize: 28 }}>{fmtMoving(s.movingSecs)}</div>
             </div>
             <div className="stat">
-              <div className="label">Avg moving</div>
+              <div className="label">Ø Tempo</div>
               <div className="value">{s.avgSpeedKmh != null ? Math.round(s.avgSpeedKmh) : '—'}<small>km/h</small></div>
             </div>
             {s.userId === userId && (
               <div className="stat">
-                <div className="label">Top speed (only you see this)</div>
+                <div className="label">Topspeed (nur für dich sichtbar)</div>
                 <div className="value">{s.topSpeedKmh != null ? Math.round(s.topSpeedKmh) : '—'}<small>km/h</small></div>
               </div>
             )}
@@ -87,7 +87,7 @@ export default function ResultsScreen() {
       ))}
 
       <p className="hint">
-        <Link to={`/trip/${tripId}`} style={{ color: 'var(--cyan)' }}>← Back to lobby</Link>
+        <Link to={`/trip/${tripId}`} style={{ color: 'var(--cyan)' }}>← Zur Lobby</Link>
       </p>
     </div>
   )

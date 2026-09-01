@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { finishTrip, getMembers, getTrip, setTripStatus } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
+import { statusLabel } from '../../lib/labels'
 import { rememberTrip } from '../../lib/recentTrips'
 import { useSession } from '../../session'
 
@@ -34,7 +35,7 @@ export default function LobbyScreen() {
 
   if (!tripId) return null
   if (error) return <div className="screen"><div className="notice">{error}</div></div>
-  if (!trip) return <div className="splash">Loading trip…</div>
+  if (!trip) return <div className="splash">Trip wird geladen…</div>
 
   const isOrganizer = trip.organizerId === userId
 
@@ -48,7 +49,7 @@ export default function LobbyScreen() {
   }
 
   const end = async () => {
-    if (!window.confirm('End the trip for everyone and compute final stats?')) return
+    if (!window.confirm('Trip für alle beenden und die Statistiken berechnen?')) return
     try {
       await finishTrip(tripId)
       refresh()
@@ -61,26 +62,28 @@ export default function LobbyScreen() {
     <div className="screen">
       <header className="row">
         <div>
-          <div className="eyebrow">Trip lobby</div>
+          <div className="eyebrow">Lobby</div>
           <h1 className="display" style={{ fontSize: 32 }}>{trip.name}</h1>
         </div>
-        <span className={trip.status === 'live' ? 'badge badge-live' : 'badge'}>{trip.status}</span>
+        <span className={trip.status === 'live' ? 'badge badge-live' : 'badge'}>
+          {statusLabel[trip.status]}
+        </span>
       </header>
 
       <div className="card">
-        <div className="label">Invite code — drop it in the group chat</div>
+        <div className="label">Einladungscode — ab in den Gruppenchat</div>
         <div className="invite-code">{trip.inviteCode}</div>
       </div>
 
       <div className="card">
-        <div className="label">Drivers ({members.length})</div>
+        <div className="label">Fahrer ({members.length})</div>
         <div>
           {members.map((m) => (
             <div className="member" key={m.userId}>
-              <strong>{m.handle}{m.userId === userId ? ' (you)' : ''}</strong>
+              <strong>{m.handle}{m.userId === userId ? ' (du)' : ''}</strong>
               <span className="car">
                 {[m.carModel, m.carColor].filter(Boolean).join(' · ') || '—'}
-                {m.role === 'organizer' ? ' · organizer' : ''}
+                {m.role === 'organizer' ? ' · Organisator' : ''}
               </span>
             </div>
           ))}
@@ -93,37 +96,37 @@ export default function LobbyScreen() {
             <div className="label">Route</div>
             <div>
               {trip.routeGeojson
-                ? `${(buildRouteIndex(trip.routeGeojson).totalM / 1000).toFixed(0)} km set`
-                : 'Not set yet'}
+                ? `${(buildRouteIndex(trip.routeGeojson).totalM / 1000).toFixed(0)} km geplant`
+                : 'Noch keine Route'}
             </div>
           </div>
           {isOrganizer && (
             <button className="btn" style={{ width: 'auto' }} onClick={() => navigate(`/trip/${tripId}/route`)}>
-              {trip.routeGeojson ? 'Edit route' : 'Plan route'}
+              {trip.routeGeojson ? 'Route bearbeiten' : 'Route planen'}
             </button>
           )}
         </div>
       </div>
 
       {isOrganizer && trip.status === 'draft' && (
-        <button className="btn btn-primary" onClick={goLive}>Go live</button>
+        <button className="btn btn-primary" onClick={goLive}>Los geht's</button>
       )}
       {trip.status === 'live' && (
         <button className="btn btn-primary" onClick={() => navigate(`/trip/${tripId}/drive`)}>
-          Enter drive mode
+          Drive Mode starten
         </button>
       )}
       {isOrganizer && trip.status === 'live' && (
-        <button className="btn" onClick={end}>Finish trip</button>
+        <button className="btn" onClick={end}>Trip beenden</button>
       )}
       {trip.status === 'ended' && (
         <button className="btn btn-primary" onClick={() => navigate(`/trip/${tripId}/results`)}>
-          View results
+          Ergebnis ansehen
         </button>
       )}
 
       <p className="hint">
-        <Link to="/" style={{ color: 'var(--cyan)' }}>← Join a different trip</Link>
+        <Link to="/" style={{ color: 'var(--cyan)' }}>← Anderen Trip öffnen</Link>
       </p>
     </div>
   )

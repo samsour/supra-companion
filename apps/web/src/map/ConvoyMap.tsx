@@ -292,11 +292,11 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
     <div className="map-wrap">
       <div ref={containerRef} className="map-canvas" />
       <button className="overview-btn" onClick={showAll}>
-        ⛶ All
+        ⛶ Alle
       </button>
       {!follow && (
         <button className="recenter-btn" onClick={enableFollow}>
-          ⌖ Follow
+          ⌖ Folgen
         </button>
       )}
     </div>

@@ -21,6 +21,7 @@ import {
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getCheckpoints, getMembers, getTrip, insertSamples } from '../../lib/api'
+import { checkpointIcon, statusLabel } from '../../lib/labels'
 import { type CarPosition } from '../../map/ConvoyMap'
 
 const ConvoyMap = lazy(() => import('../../map/ConvoyMap'))
@@ -228,42 +229,39 @@ export default function DriveScreen() {
       <div className="hud">
         <div className="hud-top">
           <div>
-            <div className="eyebrow">{trip?.name ?? 'Drive mode'}</div>
-            <h1 className="display hud-pos">
-              {me?.position ? <span className="pos-p">P{me.position}</span> : me?.offRoute ? <span className="gap-off">Off route</span> : 'Convoy'}
-              {me?.gapAheadSec != null && <span className="hud-gap">{formatGap(me.gapAheadSec)}</span>}
-            </h1>
+            <div className="eyebrow">Roadtrip</div>
+            <h1 className="display hud-pos">{trip?.name ?? 'Drive Mode'}</h1>
           </div>
           <span className={trip?.status === 'live' ? 'badge badge-live' : 'badge'}>
-            {connected ? (trip?.status ?? '…') : 'offline'}
+            {connected ? (trip ? statusLabel[trip.status] : '…') : 'offline'}
           </span>
         </div>
 
         <div className="hud-mid">
           <div className="hud-tiles">
             <div className="tile hero">
-              <div className="label">Speed</div>
+              <div className="label">Tempo</div>
               <div className="value">
                 {speedKmh != null ? Math.round(speedKmh) : '—'}
                 <small>km/h</small>
               </div>
             </div>
             <div className="tile">
-              <div className="label">Distance</div>
+              <div className="label">Strecke</div>
               <div className="value">
                 {(totals.distanceM / 1000).toFixed(1)}
                 <small>km</small>
               </div>
             </div>
             <div className="tile">
-              <div className="label">Moving</div>
+              <div className="label">Fahrzeit</div>
               <div className="value">
                 {Math.floor(totals.movingSecs / 60)}
                 <small>min</small>
               </div>
             </div>
             <div className="tile">
-              <div className="label">Cars</div>
+              <div className="label">Autos</div>
               <div className="value">
                 {livePeers.length + (latest ? 1 : 0)}
                 <small>/ {Math.max(members.length, livePeers.length + 1)}</small>
@@ -273,7 +271,7 @@ export default function DriveScreen() {
 
           {convoy && convoy.length > 0 && (
             <div className="leaderboard">
-              <div className="label">Convoy</div>
+              <div className="label">Konvoi</div>
               {convoy.map((e) => (
                 <div
                   className={`lb-row${e.userId === userId ? ' lb-you' : ''}${e.offRoute ? ' lb-off' : ''}`}
@@ -285,9 +283,9 @@ export default function DriveScreen() {
                   </span>
                   <span className="lb-gap">
                     {e.offRoute
-                      ? 'off route'
+                      ? 'abseits'
                       : e.position === 1
-                        ? 'leader'
+                        ? 'vorne'
                         : e.gapAheadSec != null
                           ? formatGap(e.gapAheadSec)
                           : '—'}
@@ -307,12 +305,12 @@ export default function DriveScreen() {
         </div>
 
         <div className="hud-section hud-bottom">
-          {geoError && <div className="notice">GPS: {geoError}. Allow location access for this site.</div>}
+          {geoError && <div className="notice">GPS: {geoError}. Bitte Standortzugriff für diese Seite erlauben.</div>}
           {nextCp && (
             <div className="tile hud-next">
-              <span className="label">Next</span>
+              <span className="label">Nächster Stopp</span>
               <strong className="display">
-                {{ fuel: '⛽', food: '🍔', photo: '📸', meet: '🏁' }[nextCp.kind]} {nextCp.name}
+                {checkpointIcon[nextCp.kind]} {nextCp.name}
               </strong>
               <span className="display" style={{ color: 'var(--cyan)' }}>
                 {(nextCp.distanceM / 1000).toFixed(nextCp.distanceM < 10_000 ? 1 : 0)} km
@@ -321,8 +319,8 @@ export default function DriveScreen() {
           )}
           <div className="hud-links">
             <Link to={`/trip/${tripId}`}>← Lobby</Link>
-            {!routeIndex && <span className="hint">no route set</span>}
-            {!wakeLockHeld && <span className="hint">keep screen on while driving</span>}
+            {!routeIndex && <span className="hint">keine Route geplant</span>}
+            {!wakeLockHeld && <span className="hint">Display während der Fahrt anlassen</span>}
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createTrip, joinTrip, loadProfile, saveProfile } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
+import { statusLabel } from '../../lib/labels'
 import { loadRecentTrips } from '../../lib/recentTrips'
 
 type Mode = 'join' | 'create'
@@ -35,7 +36,7 @@ export default function JoinScreen() {
   return (
     <div className="screen">
       <header>
-        <div className="eyebrow">Convoy companion</div>
+        <div className="eyebrow">Roadtrip-Begleiter</div>
         <h1 className="display">
           Supra <span className="glow">Companion</span>
         </h1>
@@ -43,12 +44,12 @@ export default function JoinScreen() {
 
       {recent.length > 0 && (
         <div className="card">
-          <div className="label">Jump back in</div>
+          <div className="label">Zuletzt dabei</div>
           <div>
             {recent.map((t) => (
               <button className="recent-row" key={t.id} onClick={() => navigate(`/trip/${t.id}`)}>
                 <strong>{t.name}</strong>
-                <span className="car">{t.status}</span>
+                <span className="car">{statusLabel[t.status]}</span>
               </button>
             ))}
           </div>
@@ -57,22 +58,22 @@ export default function JoinScreen() {
 
       <div className="tabs" role="tablist">
         <button className="tab" role="tab" aria-selected={mode === 'join'} onClick={() => setMode('join')}>
-          Join a trip
+          Trip beitreten
         </button>
         <button className="tab" role="tab" aria-selected={mode === 'create'} onClick={() => setMode('create')}>
-          Create a trip
+          Trip erstellen
         </button>
       </div>
 
       <form className="card" onSubmit={submit}>
         {mode === 'join' ? (
           <div>
-            <div className="label">Invite code</div>
+            <div className="label">Einladungscode</div>
             <input
               className="input"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="6-character code from the group chat"
+              placeholder="6-stelliger Code aus dem Gruppenchat"
               autoCapitalize="characters"
               autoCorrect="off"
               required
@@ -80,19 +81,19 @@ export default function JoinScreen() {
           </div>
         ) : (
           <div>
-            <div className="label">Trip name</div>
+            <div className="label">Trip-Name</div>
             <input
               className="input"
               value={tripName}
               onChange={(e) => setTripName(e.target.value)}
-              placeholder="Alpine run 2026"
+              placeholder="Alpentour 2026"
               required
             />
           </div>
         )}
 
         <div>
-          <div className="label">Your handle</div>
+          <div className="label">Dein Name</div>
           <input
             className="input"
             value={profile.handle}
@@ -102,7 +103,7 @@ export default function JoinScreen() {
           />
         </div>
         <div>
-          <div className="label">Car</div>
+          <div className="label">Auto</div>
           <input
             className="input"
             value={profile.carModel}
@@ -111,7 +112,7 @@ export default function JoinScreen() {
           />
         </div>
         <div>
-          <div className="label">Color</div>
+          <div className="label">Farbe</div>
           <input
             className="input"
             value={profile.carColor}
@@ -122,7 +123,7 @@ export default function JoinScreen() {
 
         {error && <div className="notice">{error}</div>}
         <button className="btn btn-primary" disabled={busy}>
-          {busy ? 'Working…' : mode === 'create' ? 'Create trip' : 'Join trip'}
+          {busy ? 'Moment…' : mode === 'create' ? 'Trip erstellen' : 'Beitreten'}
         </button>
       </form>
     </div>

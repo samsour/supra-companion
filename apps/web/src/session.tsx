@@ -44,7 +44,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   if (!configured)
     return <Splash msg="Missing configuration — copy apps/web/.env.example to apps/web/.env and fill it in, then restart the dev server." />
-  if (error) return <Splash msg={`Sign-in failed: ${error}. Is anonymous sign-in enabled in Supabase?`} />
-  if (!userId) return <Splash msg="Connecting…" />
+  if (error) return <Splash msg={`Anmeldung fehlgeschlagen: ${error}. Ist Anonymous Sign-in in Supabase aktiviert?`} />
+  if (!userId) return <Splash msg="Verbinde…" />
   return <Ctx.Provider value={{ userId }}>{children}</Ctx.Provider>
 }

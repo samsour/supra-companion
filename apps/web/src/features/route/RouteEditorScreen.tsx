@@ -18,6 +18,7 @@ import {
   updateTripRoute,
 } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
+import { checkpointIcon, checkpointLabel } from '../../lib/labels'
 import { applyNeonStyle } from '../../map/neonStyle'
 import { useSession } from '../../session'
 
@@ -26,7 +27,6 @@ const style =
   (import.meta.env.VITE_MAPBOX_STYLE as string | undefined) ?? 'mapbox://styles/mapbox/dark-v11'
 
 type Mode = 'route' | 'checkpoint'
-const CP_ICONS: Record<CheckpointKind, string> = { fuel: '⛽', food: '🍔', photo: '📸', meet: '🏁' }
 
 export default function RouteEditorScreen() {
   const { tripId } = useParams<{ tripId: string }>()
@@ -188,11 +188,11 @@ export default function RouteEditorScreen() {
     for (const cp of checkpoints) {
       const el = document.createElement('div')
       el.className = 'cp-marker cp-editable'
-      el.textContent = CP_ICONS[cp.kind]
-      el.title = `${cp.name} — tap to remove`
+      el.textContent = checkpointIcon[cp.kind]
+      el.title = `${cp.name} — antippen zum Entfernen`
       el.addEventListener('click', (ev) => {
         ev.stopPropagation()
-        if (window.confirm(`Remove checkpoint "${cp.name}"?`)) {
+        if (window.confirm(`Stopp "${cp.name}" entfernen?`)) {
           void deleteCheckpoint(cp.id).then(refreshCheckpoints)
         }
       })
@@ -257,8 +257,8 @@ export default function RouteEditorScreen() {
   if (trip && trip.organizerId !== userId) {
     return (
       <div className="screen">
-        <div className="notice">Only the organizer can edit the route.</div>
-        <p className="hint"><Link to={`/trip/${tripId}`} style={{ color: 'var(--cyan)' }}>← Back to lobby</Link></p>
+        <div className="notice">Nur der Organisator kann die Route bearbeiten.</div>
+        <p className="hint"><Link to={`/trip/${tripId}`} style={{ color: 'var(--cyan)' }}>← Zur Lobby</Link></p>
       </div>
     )
   }
@@ -268,25 +268,25 @@ export default function RouteEditorScreen() {
       <header className="row">
         <div>
           <div className="eyebrow">{trip?.name ?? 'Route'}</div>
-          <h1 className="display" style={{ fontSize: 26 }}>Route editor</h1>
+          <h1 className="display" style={{ fontSize: 26 }}>Routen-Editor</h1>
         </div>
         <span className="badge">
-          {preview ? `${(preview.distanceM / 1000).toFixed(0)} km` : `${waypoints.length} pts`}
+          {preview ? `${(preview.distanceM / 1000).toFixed(0)} km` : `${waypoints.length} Punkte`}
         </span>
       </header>
 
       <div className="tabs" role="tablist">
         <button className="tab" role="tab" aria-selected={mode === 'route'} onClick={() => setMode('route')}>
-          ➤ Waypoints
+          ➤ Wegpunkte
         </button>
         <button className="tab" role="tab" aria-selected={mode === 'checkpoint'} onClick={() => setMode('checkpoint')}>
-          🏁 Checkpoints
+          🏁 Stopps
         </button>
       </div>
       <p className="hint" style={{ margin: 0 }}>
         {mode === 'route'
-          ? 'Tap the map to drop waypoints — the driving route snaps to roads between them.'
-          : 'Tap the map to place a checkpoint (fuel, food, photo, meet). Tap a pin to remove it.'}
+          ? 'Tippe auf die Karte, um Wegpunkte zu setzen — die Route folgt automatisch den Straßen.'
+          : 'Tippe auf die Karte, um einen Stopp zu setzen (Tanken, Essen, Foto, Treffpunkt). Pin antippen zum Entfernen.'}
       </p>
 
       {!token ? (
@@ -299,25 +299,25 @@ export default function RouteEditorScreen() {
 
       {pendingCp && (
         <div className="card">
-          <div className="label">New checkpoint</div>
+          <div className="label">Neuer Stopp</div>
           <input
             className="input"
-            placeholder="Fuel stop Irschenberg"
+            placeholder="Tankstopp Irschenberg"
             value={cpName}
             onChange={(e) => setCpName(e.target.value)}
             autoFocus
           />
           <div className="tabs" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
-            {(Object.keys(CP_ICONS) as CheckpointKind[]).map((k) => (
+            {(Object.keys(checkpointIcon) as CheckpointKind[]).map((k) => (
               <button key={k} className="tab" aria-selected={cpKind === k} onClick={() => setCpKind(k)}>
-                {CP_ICONS[k]} {k}
+                {checkpointIcon[k]} {checkpointLabel[k]}
               </button>
             ))}
           </div>
           <div className="row">
-            <button className="btn" onClick={() => setPendingCp(null)}>Cancel</button>
+            <button className="btn" onClick={() => setPendingCp(null)}>Abbrechen</button>
             <button className="btn btn-primary" disabled={busy || !cpName.trim()} onClick={saveCp}>
-              Add
+              Hinzufügen
             </button>
           </div>
         </div>
@@ -334,7 +334,7 @@ export default function RouteEditorScreen() {
             setDirty(true)
           }}
         >
-          Undo
+          Rückgängig
         </button>
         <button
           className="btn"
@@ -345,15 +345,15 @@ export default function RouteEditorScreen() {
             setDirty(true)
           }}
         >
-          Clear
+          Leeren
         </button>
         <button className="btn btn-primary" disabled={busy || (dirty && waypoints.length === 1)} onClick={save}>
-          {busy ? 'Saving…' : 'Save route'}
+          {busy ? 'Speichern…' : 'Route speichern'}
         </button>
       </div>
 
       <p className="hint">
-        <Link to={`/trip/${tripId}`} style={{ color: 'var(--cyan)' }}>← Back to lobby</Link>
+        <Link to={`/trip/${tripId}`} style={{ color: 'var(--cyan)' }}>← Zur Lobby</Link>
       </p>
     </div>
   )
