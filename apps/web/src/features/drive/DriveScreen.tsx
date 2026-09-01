@@ -257,18 +257,16 @@ export default function DriveScreen() {
                 <small>min</small>
               </div>
             </div>
-            <div className="tile">
-              <div className="label">Autos</div>
-              <div className="value">
-                {livePeers.length + (latest ? 1 : 0)}
-                <small>/ {Math.max(members.length, livePeers.length + 1)}</small>
-              </div>
-            </div>
           </div>
 
           {convoy && convoy.length > 0 && (
             <div className="leaderboard">
-              <div className="label">Konvoi</div>
+              <div className="row">
+                <span className="label">Konvoi</span>
+                {me?.position != null && (
+                  <span className="lb-mypos">{me.position}/{members.length}</span>
+                )}
+              </div>
               {convoy.map((e) => (
                 <div
                   className={`lb-row${e.userId === userId ? ' lb-you' : ''}${e.offRoute ? ' lb-off' : ''}`}
