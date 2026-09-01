@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import { createTrip, joinTrip, loadProfile, saveProfile } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { statusLabel } from '../../lib/labels'
@@ -9,10 +9,12 @@ type Mode = 'join' | 'create'
 
 export default function JoinScreen() {
   const navigate = useNavigate()
+  // deep link from a shared invite: /join/CODE prefills the code
+  const { code: codeParam } = useParams<{ code?: string }>()
   const [mode, setMode] = useState<Mode>('join')
   const [profile, setProfile] = useState(loadProfile)
   const [tripName, setTripName] = useState('')
-  const [code, setCode] = useState('')
+  const [code, setCode] = useState(() => codeParam?.toUpperCase() ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [recent] = useState(loadRecentTrips)
@@ -68,7 +70,9 @@ export default function JoinScreen() {
       <form className="card" onSubmit={submit}>
         {mode === 'join' ? (
           <div>
-            <div className="label">Einladungscode</div>
+            <div className="label">
+              {codeParam ? 'Du bist eingeladen — nur noch Name eintragen' : 'Einladungscode'}
+            </div>
             <input
               className="input"
               value={code}

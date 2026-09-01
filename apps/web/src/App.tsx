@@ -15,6 +15,7 @@ export default function App() {
         <Suspense fallback={<div className="splash">Loading…</div>}>
           <Routes>
             <Route path="/" element={<JoinScreen />} />
+            <Route path="/join/:code" element={<JoinScreen />} />
             <Route path="/trip/:tripId" element={<LobbyScreen />} />
             <Route path="/trip/:tripId/route" element={<RouteEditorScreen />} />
             <Route path="/trip/:tripId/results" element={<ResultsScreen />} />

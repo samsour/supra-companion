@@ -14,6 +14,7 @@ export default function LobbyScreen() {
   const [trip, setTrip] = useState<Trip | null>(null)
   const [members, setMembers] = useState<TripMember[]>([])
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   const refresh = useCallback(() => {
     if (!tripId) return
@@ -48,6 +49,25 @@ export default function LobbyScreen() {
     }
   }
 
+  const share = async () => {
+    const url = `${window.location.origin}/join/${trip!.inviteCode}`
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Supra Companion',
+          text: `Komm mit auf "${trip!.name}"!`,
+          url,
+        })
+      } else {
+        await navigator.clipboard.writeText(url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2_500)
+      }
+    } catch {
+      /* share sheet dismissed */
+    }
+  }
+
   const end = async () => {
     if (!window.confirm('Trip für alle beenden und die Statistiken berechnen?')) return
     try {
@@ -73,6 +93,9 @@ export default function LobbyScreen() {
       <div className="card">
         <div className="label">Einladungscode — ab in den Gruppenchat</div>
         <div className="invite-code">{trip.inviteCode}</div>
+        <button className="btn" onClick={share}>
+          {copied ? 'Link kopiert ✓' : '🔗 Einladungslink teilen'}
+        </button>
       </div>
 
       <div className="card">
