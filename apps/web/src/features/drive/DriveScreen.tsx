@@ -31,6 +31,11 @@ const ConvoyMap = lazy(() => import('../../map/ConvoyMap'))
 // tab at some point, and the km counter shouldn't reset when it does
 const totalsKey = (tripId: string, userId: string) => `supra.totals.${tripId}.${userId}`
 
+const fmtEta = (sec: number): string =>
+  sec < 5400
+    ? `${Math.max(1, Math.round(sec / 60))} min`
+    : `${Math.floor(sec / 3600)} h ${String(Math.round((sec % 3600) / 60)).padStart(2, '0')}`
+
 function loadTotals(tripId: string, userId: string): TripTotals {
   try {
     const raw = localStorage.getItem(totalsKey(tripId, userId))
@@ -196,6 +201,14 @@ export default function DriveScreen() {
     return ahead ? { ...ahead.cp, distanceM: ahead.fix.alongM - me.alongM } : null
   }, [cpAlongs, me])
 
+  // map + finish flag follow the route order (off-route stops appended)
+  const sortedCheckpoints = useMemo(() => {
+    if (!routeIndex) return checkpoints
+    const onRoute = cpAlongs.map((x) => x.cp)
+    return [...onRoute, ...checkpoints.filter((c) => !onRoute.some((o) => o.id === c.id))]
+  }, [checkpoints, cpAlongs, routeIndex])
+  const lastCpId = sortedCheckpoints[sortedCheckpoints.length - 1]?.id
+
   const cars = useMemo<CarPosition[]>(() => {
     const list: CarPosition[] = livePeers.map((p) => ({
       userId: p.userId,
@@ -230,7 +243,7 @@ export default function DriveScreen() {
   return (
     <div className="drive-full">
       <Suspense fallback={<div className="map-placeholder" style={{ position: 'absolute', inset: 0 }}>Loading map…</div>}>
-        <ConvoyMap cars={cars} route={trip?.routeGeojson ?? null} checkpoints={checkpoints} />
+        <ConvoyMap cars={cars} route={trip?.routeGeojson ?? null} checkpoints={sortedCheckpoints} />
       </Suspense>
 
       <div className="hud">
@@ -312,12 +325,16 @@ export default function DriveScreen() {
             <div className="tile hud-next">
               <span className="label">Nächster Stopp</span>
               <strong className="display">
-                {stopIcon(nextCp.kind, nextCp.id === checkpoints[checkpoints.length - 1]?.id)}{' '}
-                {nextCp.name}
+                {stopIcon(nextCp.kind, nextCp.id === lastCpId)} {nextCp.name}
               </strong>
               <span className="display" style={{ color: 'var(--cyan)' }}>
                 {(nextCp.distanceM / 1000).toFixed(nextCp.distanceM < 10_000 ? 1 : 0)} km
               </span>
+              {latest?.speedMps != null && latest.speedMps >= STATIONARY_SPEED_MPS && (
+                <span className="display" style={{ color: 'var(--muted)', fontSize: 16 }}>
+                  ~{fmtEta(nextCp.distanceM / latest.speedMps)}
+                </span>
+              )}
             </div>
           )}
           <div className="hud-links">

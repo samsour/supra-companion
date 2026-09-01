@@ -343,6 +343,31 @@ h1 .glow {
   margin-right: 4px;
 }
 
+.cp-km {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cp-km-warn {
+  color: var(--magenta);
+}
+
+.via-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.via-check input {
+  accent-color: var(--amber);
+  width: 18px;
+  height: 18px;
+}
+
 .cp-row-actions {
   display: flex;
   gap: 6px;

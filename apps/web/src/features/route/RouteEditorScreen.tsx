@@ -1,10 +1,12 @@
 import {
   buildRouteIndex,
+  snapToRoute,
   type Checkpoint,
   type CheckpointKind,
   type RouteGeometry,
   type Trip,
 } from '@supra/core'
+import { useMemo } from 'react'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react'
@@ -58,7 +60,43 @@ export default function RouteEditorScreen() {
   const [query, setQuery] = useState('')
   const [hits, setHits] = useState<PlaceHit[]>([])
   const [searching, setSearching] = useState(false)
+  const [routeVia, setRouteVia] = useState(true)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const editorRouteIndex = useMemo(
+    () => (preview ? buildRouteIndex(preview.geometry) : null),
+    [preview],
+  )
+  const isImported = waypoints.length === 0 && preview !== null
+
+  /** Stopps auf der Kilometer-Achse der Route: sortiert nach Lage, mit
+   *  km-Marke; Abseitige (>500 m neben der Linie) ans Ende mit Warnung. */
+  const stopRows = useMemo(() => {
+    if (!editorRouteIndex) {
+      return checkpoints.map((cp) => ({ cp, alongM: null as number | null, offM: null as number | null }))
+    }
+    return checkpoints
+      .map((cp) => {
+        const fix = snapToRoute(editorRouteIndex, { lat: cp.lat, lng: cp.lng })
+        return { cp, alongM: fix.alongM, offM: fix.offRouteM }
+      })
+      .sort((a, b) => (a.offM! > 500 ? Infinity : a.alongM!) - (b.offM! > 500 ? Infinity : b.alongM!))
+  }, [checkpoints, editorRouteIndex])
+
+  /** Wegpunkt so einfügen, dass die Route über diesen Punkt führt. */
+  const insertViaWaypoint = (p: { lng: number; lat: number }) => {
+    setWaypoints((prev) => {
+      if (prev.length < 2 || !editorRouteIndex) return [...prev, [p.lng, p.lat]]
+      const stopAlong = snapToRoute(editorRouteIndex, { lat: p.lat, lng: p.lng }).alongM
+      const alongs = prev.map(([lng, lat]) => snapToRoute(editorRouteIndex, { lat, lng }).alongM)
+      let idx = alongs.findIndex((a) => a > stopAlong)
+      if (idx === -1) idx = prev.length
+      const n = [...prev]
+      n.splice(idx, 0, [p.lng, p.lat])
+      return n
+    })
+    setDirty(true)
+  }
   // true when the preview came from an import (no waypoints backing it)
   const importedRef = useRef(false)
   useEffect(() => {
@@ -343,6 +381,7 @@ export default function RouteEditorScreen() {
         lng: pendingCp.lng,
         orderIdx: checkpoints.length,
       })
+      if (routeVia && !isImported) insertViaWaypoint(pendingCp)
       setPendingCp(null)
       setCpName('')
       refreshCheckpoints()
@@ -470,6 +509,12 @@ export default function RouteEditorScreen() {
               </button>
             ))}
           </div>
+          {!isImported && (
+            <label className="via-check">
+              <input type="checkbox" checked={routeVia} onChange={(e) => setRouteVia(e.target.checked)} />
+              Route über diesen Stopp führen
+            </label>
+          )}
           <div className="btn-row">
             <button className="btn" onClick={() => setPendingCp(null)}>Abbrechen</button>
             <button className="btn btn-primary" disabled={busy || !cpName.trim()} onClick={saveCp}>
@@ -510,27 +555,40 @@ export default function RouteEditorScreen() {
         </div>
       )}
 
-      {checkpoints.length > 0 && (
+      {stopRows.length > 0 && (
         <div className="card">
-          <div className="label">Stopps ({checkpoints.length}) — Reihenfolge des Tages</div>
+          <div className="label">
+            Stopps ({stopRows.length}) — {editorRouteIndex ? 'entlang der Route' : 'Reihenfolge des Tages'}
+          </div>
           <div>
-            {checkpoints.map((cp, i) => (
+            {stopRows.map(({ cp, alongM, offM }, i) => (
               <div className="cp-row" key={cp.id}>
                 <span className="cp-row-name">
-                  <span className="cp-row-idx">{i + 1}</span> {stopIcon(cp.kind, i === checkpoints.length - 1)} {cp.name}
+                  <span className="cp-row-idx">{i + 1}</span>{' '}
+                  {stopIcon(cp.kind, i === stopRows.length - 1 && (offM === null || offM <= 500))} {cp.name}{' '}
+                  {alongM !== null &&
+                    (offM! > 500 ? (
+                      <span className="cp-km cp-km-warn">⚠ {(offM! / 1000).toFixed(1)} km neben der Route</span>
+                    ) : (
+                      <span className="cp-km">km {(alongM / 1000).toFixed(0)}</span>
+                    ))}
                 </span>
                 <span className="cp-row-actions">
-                  <button className="icon-btn" disabled={i === 0} onClick={() => moveCheckpoint(i, -1)} aria-label="nach oben">
-                    ↑
-                  </button>
-                  <button
-                    className="icon-btn"
-                    disabled={i === checkpoints.length - 1}
-                    onClick={() => moveCheckpoint(i, 1)}
-                    aria-label="nach unten"
-                  >
-                    ↓
-                  </button>
+                  {!editorRouteIndex && (
+                    <>
+                      <button className="icon-btn" disabled={i === 0} onClick={() => moveCheckpoint(i, -1)} aria-label="nach oben">
+                        ↑
+                      </button>
+                      <button
+                        className="icon-btn"
+                        disabled={i === stopRows.length - 1}
+                        onClick={() => moveCheckpoint(i, 1)}
+                        aria-label="nach unten"
+                      >
+                        ↓
+                      </button>
+                    </>
+                  )}
                   <button className="icon-btn icon-btn-danger" onClick={() => removeCheckpoint(cp)} aria-label="entfernen">
                     ✕
                   </button>
