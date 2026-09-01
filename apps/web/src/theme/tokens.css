@@ -274,6 +274,19 @@ h1 .glow {
   color: var(--magenta);
 }
 
+.kind-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.kind-row .tab {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
 .cp-row {
   display: flex;
   align-items: center;

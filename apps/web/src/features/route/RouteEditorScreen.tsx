@@ -22,7 +22,7 @@ import {
 } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { parseGpx } from '../../lib/gpx'
-import { checkpointIcon, checkpointLabel } from '../../lib/labels'
+import { checkpointIcon, checkpointLabel, stopIcon } from '../../lib/labels'
 import { applyNeonStyle } from '../../map/neonStyle'
 import { useSession } from '../../session'
 
@@ -298,10 +298,10 @@ export default function RouteEditorScreen() {
   useEffect(() => {
     const map = mapRef.current
     if (!map || !loaded) return
-    for (const cp of checkpoints) {
+    for (const [i, cp] of checkpoints.entries()) {
       const el = document.createElement('div')
       el.className = 'cp-marker cp-editable'
-      el.textContent = checkpointIcon[cp.kind]
+      el.textContent = stopIcon(cp.kind, i === checkpoints.length - 1)
       el.title = `${cp.name} — antippen zum Entfernen`
       el.addEventListener('click', (ev) => {
         ev.stopPropagation()
@@ -462,7 +462,7 @@ export default function RouteEditorScreen() {
             onChange={(e) => setCpName(e.target.value)}
             autoFocus
           />
-          <div className="tabs" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+          <div className="kind-row">
             {(Object.keys(checkpointIcon) as CheckpointKind[]).map((k) => (
               <button key={k} className="tab" aria-selected={cpKind === k} onClick={() => setCpKind(k)}>
                 {checkpointIcon[k]} {checkpointLabel[k]}
@@ -516,7 +516,7 @@ export default function RouteEditorScreen() {
             {checkpoints.map((cp, i) => (
               <div className="cp-row" key={cp.id}>
                 <span className="cp-row-name">
-                  <span className="cp-row-idx">{i + 1}</span> {checkpointIcon[cp.kind]} {cp.name}
+                  <span className="cp-row-idx">{i + 1}</span> {stopIcon(cp.kind, i === checkpoints.length - 1)} {cp.name}
                 </span>
                 <span className="cp-row-actions">
                   <button className="icon-btn" disabled={i === 0} onClick={() => moveCheckpoint(i, -1)} aria-label="nach oben">

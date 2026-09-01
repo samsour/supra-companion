@@ -2,6 +2,7 @@ import type { Checkpoint, RouteGeometry } from '@supra/core'
 import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useEffect, useRef, useState } from 'react'
+import { stopIcon } from '../lib/labels'
 import { applyNeonStyle } from './neonStyle'
 
 const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
@@ -155,11 +156,11 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
   useEffect(() => {
     const map = mapRef.current
     if (!map || !loaded) return
-    for (const cp of checkpoints) {
+    for (const [i, cp] of checkpoints.entries()) {
       const el = document.createElement('div')
       el.className = 'cp-marker'
       el.title = cp.name
-      el.textContent = { fuel: '⛽', food: '🍔', photo: '📸', meet: '🏁' }[cp.kind]
+      el.textContent = stopIcon(cp.kind, i === checkpoints.length - 1)
       cpMarkersRef.current.push(new mapboxgl.Marker({ element: el }).setLngLat([cp.lng, cp.lat]).addTo(map))
     }
     return () => {

@@ -21,7 +21,7 @@ import {
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { getCheckpoints, getMembers, getTrip, insertSamples } from '../../lib/api'
-import { checkpointIcon, statusLabel } from '../../lib/labels'
+import { statusLabel, stopIcon } from '../../lib/labels'
 import { type CarPosition } from '../../map/ConvoyMap'
 
 const ConvoyMap = lazy(() => import('../../map/ConvoyMap'))
@@ -305,7 +305,8 @@ export default function DriveScreen() {
             <div className="tile hud-next">
               <span className="label">Nächster Stopp</span>
               <strong className="display">
-                {checkpointIcon[nextCp.kind]} {nextCp.name}
+                {stopIcon(nextCp.kind, nextCp.id === checkpoints[checkpoints.length - 1]?.id)}{' '}
+                {nextCp.name}
               </strong>
               <span className="display" style={{ color: 'var(--cyan)' }}>
                 {(nextCp.distanceM / 1000).toFixed(nextCp.distanceM < 10_000 ? 1 : 0)} km

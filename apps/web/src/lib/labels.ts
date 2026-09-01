@@ -10,8 +10,12 @@ export const checkpointIcon: Record<CheckpointKind, string> = {
   fuel: '⛽',
   food: '🍔',
   photo: '📸',
-  meet: '🏁',
+  meet: '📍',
 }
+
+/** Der letzte Stopp der Route ist das Ziel — er bekommt die Zielflagge. */
+export const stopIcon = (kind: CheckpointKind, isLast: boolean): string =>
+  isLast ? '🏁' : checkpointIcon[kind]
 
 export const checkpointLabel: Record<CheckpointKind, string> = {
   fuel: 'Tanken',
