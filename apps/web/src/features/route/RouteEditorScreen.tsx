@@ -17,6 +17,7 @@ import {
   fetchDirections,
   getCheckpoints,
   getTrip,
+  matchToRoads,
   searchPlaces,
   setCheckpointOrder,
   updateTripRoute,
@@ -120,13 +121,37 @@ export default function RouteEditorScreen() {
     setDirty(true)
   }
 
+  const downsample = (pts: [number, number][], target: number): [number, number][] => {
+    if (pts.length <= target) return pts
+    const step = (pts.length - 1) / (target - 1)
+    return Array.from({ length: target }, (_, i) => pts[Math.round(i * step)]!)
+  }
+
   const importGpx = async (file: File) => {
+    setBusy(true)
     try {
       const { coordinates, stopps } = parseGpx(await file.text())
-      const geometry: RouteGeometry = { type: 'LineString', coordinates }
-      setWaypoints([])
-      setDirty(false)
-      setPreview({ geometry, distanceM: buildRouteIndex(geometry).totalM })
+      const rawGeometry: RouteGeometry = { type: 'LineString', coordinates }
+      const totalM = buildRouteIndex(rawGeometry).totalM
+      const avgStepM = totalM / Math.max(1, coordinates.length - 1)
+
+      if (coordinates.length <= 25 || avgStepM > 300) {
+        // grobe GPX (nur Via-Punkte): als Wegpunkte übernehmen und straßengenau
+        // routen — Ergebnis bleibt editierbar wie eine handgeplante Route
+        setWaypoints(downsample(coordinates, 25))
+        setDirty(true)
+        setPreview(null)
+      } else {
+        // dichter Track: aufs Straßennetz matchen; wenn das nicht klappt
+        // (z.B. Offroad-Anteile), bleibt die Rohlinie als Fallback
+        setWaypoints([])
+        setDirty(false)
+        try {
+          setPreview(await matchToRoads(downsample(coordinates, 380)))
+        } catch {
+          setPreview({ geometry: rawGeometry, distanceM: totalM })
+        }
+      }
       fittedRef.current = false
       if (tripId && stopps.length > 0) {
         for (const [i, s] of stopps.entries()) {
@@ -143,6 +168,8 @@ export default function RouteEditorScreen() {
       setError(null)
     } catch (e) {
       setError(errorMessage(e))
+    } finally {
+      setBusy(false)
     }
   }
 

@@ -201,6 +201,40 @@ export async function fetchDirections(
   return { geometry: body.routes[0].geometry, distanceM: body.routes[0].distance }
 }
 
+/** Mapbox Map Matching: rastet einen GPS-Track auf das Straßennetz.
+ *  Max. 100 Punkte pro Anfrage — wird hier überlappend gechunkt. */
+export async function matchToRoads(
+  coords: [number, number][],
+): Promise<{ geometry: RouteGeometry; distanceM: number }> {
+  const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
+  if (!token) throw new Error('VITE_MAPBOX_TOKEN fehlt')
+  const chunks: [number, number][][] = []
+  for (let i = 0; i < coords.length - 1; i += 99) chunks.push(coords.slice(i, i + 100))
+  const all: [number, number][] = []
+  let distanceM = 0
+  for (const chunk of chunks) {
+    if (chunk.length < 2) continue
+    const cs = chunk.map(([lng, lat]) => `${lng},${lat}`).join(';')
+    const radiuses = chunk.map(() => 25).join(';')
+    const url = `https://api.mapbox.com/matching/v5/mapbox/driving/${cs}?geometries=geojson&overview=full&radiuses=${radiuses}&access_token=${token}`
+    const res = await fetch(url)
+    const body = (await res.json()) as {
+      code?: string
+      message?: string
+      matchings?: { geometry: RouteGeometry; distance: number }[]
+    }
+    if (!res.ok || body.code !== 'Ok' || !body.matchings?.length) {
+      throw new Error(body.message ?? `Map Matching fehlgeschlagen (${body.code ?? res.status})`)
+    }
+    for (const m of body.matchings) {
+      all.push(...m.geometry.coordinates.slice(all.length > 0 ? 1 : 0))
+      distanceM += m.distance
+    }
+  }
+  if (all.length < 2) throw new Error('Map Matching lieferte keine Route')
+  return { geometry: { type: 'LineString', coordinates: all }, distanceM }
+}
+
 export interface PlaceHit {
   name: string
   lng: number
