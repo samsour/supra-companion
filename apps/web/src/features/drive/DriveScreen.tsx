@@ -342,7 +342,7 @@ export default function DriveScreen() {
               aria-label={sunMode ? 'Sonnen-Boost ausschalten' : 'Sonnen-Boost einschalten'}
               onClick={toggleSunMode}
             >
-              {sunMode ? '☀️' : '🌙'}
+              {sunMode ? '☀︎' : '☾'}
             </button>
             {/* Zuschauerzahl sieht bewusst nur der Organisator */}
             {spectators > 0 && trip?.organizerId === userId && (
