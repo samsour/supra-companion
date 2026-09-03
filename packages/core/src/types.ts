@@ -1,5 +1,5 @@
 export type TripStatus = 'draft' | 'live' | 'ended'
-export type MemberRole = 'organizer' | 'driver' | 'passenger'
+export type MemberRole = 'organizer' | 'driver' | 'passenger' | 'spectator'
 export type CheckpointKind = 'fuel' | 'food' | 'photo' | 'meet'
 
 export interface LatLng {
@@ -23,6 +23,8 @@ export interface Trip {
   routeWaypoints: [number, number][] | null
   startsAt: string | null
   inviteCode: string
+  /** separater Code für den Nur-Zuschauen-Link (/watch/CODE) */
+  spectatorCode: string | null
 }
 
 export interface TripMember {

@@ -15,6 +15,7 @@ export function useConvoyChannel(tripId: string, userId: string, accent?: string
   const queuedRef = useRef<LocationSample | null>(null)
 
   useEffect(() => {
+    if (!tripId) return
     const ch = supabase.channel(tripChannel(tripId), {
       config: { private: true, broadcast: { self: false } },
     })

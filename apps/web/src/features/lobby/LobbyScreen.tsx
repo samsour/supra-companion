@@ -72,15 +72,10 @@ export default function LobbyScreen() {
     }
   }
 
-  const share = async () => {
-    const url = `${window.location.origin}/join/${trip!.inviteCode}`
+  const shareUrl = async (url: string, text: string) => {
     try {
       if (navigator.share) {
-        await navigator.share({
-          title: 'Supra Companion',
-          text: `Komm mit auf "${trip!.name}"!`,
-          url,
-        })
+        await navigator.share({ title: 'Supra Companion', text, url })
       } else {
         await navigator.clipboard.writeText(url)
         setCopied(true)
@@ -90,6 +85,13 @@ export default function LobbyScreen() {
       /* share sheet dismissed */
     }
   }
+
+  const share = () => shareUrl(`${window.location.origin}/join/${trip!.inviteCode}`, `Komm mit auf "${trip!.name}"!`)
+  const shareWatch = () =>
+    shareUrl(
+      `${window.location.origin}/watch/${trip!.spectatorCode}`,
+      `Schau live zu, wo der Konvoi "${trip!.name}" gerade ist!`,
+    )
 
   const duplicate = async () => {
     if (!window.confirm('Route und Stopps in einen neuen Trip kopieren? Du wirst Organisator der Kopie.')) return
@@ -181,15 +183,24 @@ export default function LobbyScreen() {
       <div className="card">
         <div className="label">Einladungscode — ab in den Gruppenchat</div>
         <div className="invite-code">{trip.inviteCode}</div>
-        <button className="btn" onClick={share}>
+        <button className="btn" onClick={() => void share()}>
           {copied ? 'Link kopiert ✓' : '🔗 Einladungslink teilen'}
         </button>
+        {trip.spectatorCode && (
+          <button className="btn" onClick={() => void shareWatch()}>
+            👁 Zuschauer-Link teilen
+          </button>
+        )}
       </div>
 
       <div className="card">
-        <div className="label">Fahrer ({members.length})</div>
+        <div className="label">
+          Fahrer ({members.filter((m) => m.role !== 'spectator').length})
+          {members.some((m) => m.role === 'spectator') &&
+            ` · 👁 ${members.filter((m) => m.role === 'spectator').length} Zuschauer`}
+        </div>
         <div>
-          {members.map((m) => (
+          {members.filter((m) => m.role !== 'spectator').map((m) => (
             <div className="member" key={m.userId}>
               <strong>{m.handle}{m.userId === userId ? ' (du)' : ''}</strong>
               <span className="car">

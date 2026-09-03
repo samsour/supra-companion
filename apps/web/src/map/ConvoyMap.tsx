@@ -26,6 +26,8 @@ interface Props {
   cars: CarPosition[]
   route: RouteGeometry | null
   checkpoints: Checkpoint[]
+  /** Zuschauer-Modus: Auto-Framing über Route + Konvoi statt Chase-Cam */
+  spectate?: boolean
 }
 
 /** camera zoom while following own car — follow always returns to this */
@@ -72,7 +74,7 @@ function buildCarElements(car: CarPosition): { arrowRoot: HTMLDivElement; labelE
   return { arrowRoot, labelEl }
 }
 
-export default function ConvoyMap({ cars, route, checkpoints }: Props) {
+export default function ConvoyMap({ cars, route, checkpoints, spectate = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -247,11 +249,34 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
     return () => cancelAnimationFrame(raf)
   }, [loaded])
 
+  // --- spectate: alles im Bild halten; Interaktion pausiert das Framing kurz ---
+  useEffect(() => {
+    if (!spectate || !loaded) return
+    const fit = () => {
+      const map = mapRef.current
+      if (!map || !followRef.current) return
+      const pts: [number, number][] = [...carsRef.current.values()].map((e) => [e.target.lng, e.target.lat])
+      if (pts.length === 0 && route) {
+        for (let i = 0; i < route.coordinates.length; i += Math.max(1, Math.floor(route.coordinates.length / 50))) {
+          pts.push(route.coordinates[i] as [number, number])
+        }
+      }
+      if (pts.length === 0) return
+      const bounds = new mapboxgl.LngLatBounds(pts[0]!, pts[0]!)
+      for (const p of pts) bounds.extend(p)
+      map.fitBounds(bounds, { padding: 70, maxZoom: 14, pitch: 0, bearing: 0, duration: 1000 })
+    }
+    fit()
+    const id = window.setInterval(fit, 12_000)
+    return () => window.clearInterval(id)
+  }, [spectate, loaded, route])
+
   // --- camera follows own car, course-up: your heading is always screen-top.
   // Follow enforces FOLLOW_ZOOM, so manual pan/zoom is fully restored
   // (center, bearing, and zoom) when idle recenter kicks back in.
   const self = cars.find((c) => c.isSelf)
   useEffect(() => {
+    if (spectate) return
     const map = mapRef.current
     if (!map || !loaded || !followRef.current || !self) return
     const bearing = self.heading ?? map.getBearing()
@@ -299,10 +324,12 @@ export default function ConvoyMap({ cars, route, checkpoints }: Props) {
   return (
     <div className="map-wrap">
       <div ref={containerRef} className="map-canvas" />
-      <button className="overview-btn" onClick={showAll}>
-        ⛶ Alle
-      </button>
-      {!follow && (
+      {!spectate && (
+        <button className="overview-btn" onClick={showAll}>
+          ⛶ Alle
+        </button>
+      )}
+      {!spectate && !follow && (
         <button className="recenter-btn" onClick={enableFollow}>
           ⌖ Folgen
         </button>

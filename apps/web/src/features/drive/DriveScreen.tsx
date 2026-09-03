@@ -186,6 +186,7 @@ export default function DriveScreen() {
 
   const me = convoy?.find((e) => e.userId === userId)
   const handleOf = (id: string) => members.find((m) => m.userId === id)?.handle ?? id.slice(0, 6)
+  const drivers = useMemo(() => members.filter((m) => m.role !== 'spectator'), [members])
 
   // checkpoints projected onto the route, for the "next checkpoint" readout
   const cpAlongs = useMemo(() => {
@@ -285,7 +286,7 @@ export default function DriveScreen() {
               <div className="row">
                 <span className="label">Konvoi</span>
                 {me?.position != null && (
-                  <span className="lb-mypos">{me.position}/{members.length}</span>
+                  <span className="lb-mypos">{me.position}/{drivers.length}</span>
                 )}
               </div>
               {convoy.map((e) => (
@@ -309,7 +310,7 @@ export default function DriveScreen() {
                 </div>
               ))}
               {(() => {
-                const offline = members.filter((m) => !convoy.some((e) => e.userId === m.userId))
+                const offline = drivers.filter((m) => !convoy.some((e) => e.userId === m.userId))
                 if (offline.length === 0) return null
                 // wenige Offline direkt zeigen; viele zu einer Zeile einklappen
                 if (offline.length <= 2 || showOffline) {

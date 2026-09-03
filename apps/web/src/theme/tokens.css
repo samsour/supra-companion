@@ -904,6 +904,44 @@ h1 .glow {
   font-size: 18px;
 }
 
+/* Etappen-Fortschritt im Zuschauer-Modus */
+.watch-progress {
+  position: relative;
+  height: 30px;
+  margin: 0 4px;
+}
+
+.wp-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 4px;
+  transform: translateY(-50%);
+  border-radius: 2px;
+  background: color-mix(in srgb, #4d8dff 45%, transparent);
+  box-shadow: 0 0 10px color-mix(in srgb, #1f51ff 50%, transparent);
+}
+
+.wp-cp {
+  position: absolute;
+  top: -4px;
+  transform: translateX(-50%);
+  font-size: 13px;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.8));
+}
+
+.wp-car {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--ground);
+  box-shadow: 0 0 8px currentcolor;
+}
+
 .hud-links {
   display: flex;
   gap: 14px;

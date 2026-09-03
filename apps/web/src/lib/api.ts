@@ -19,6 +19,7 @@ interface TripRow {
   route_waypoints: [number, number][] | null
   starts_at: string | null
   invite_code: string
+  spectator_code: string | null
 }
 
 interface MemberRow {
@@ -40,6 +41,7 @@ const toTrip = (r: TripRow): Trip => ({
   routeWaypoints: r.route_waypoints,
   startsAt: r.starts_at,
   inviteCode: r.invite_code,
+  spectatorCode: r.spectator_code,
 })
 
 const toMember = (r: MemberRow): TripMember => ({
@@ -78,6 +80,13 @@ export async function joinTrip(code: string, p: ProfileInput): Promise<string> {
     p_car_model: p.carModel || null,
     p_car_color: p.carColor || null,
   })
+  if (error) throw error
+  return data as string
+}
+
+/** Stiller Zuschauer-Beitritt über den Watch-Code; liefert die Trip-ID. */
+export async function joinAsSpectator(code: string): Promise<string> {
+  const { data, error } = await supabase.rpc('join_as_spectator', { p_code: code })
   if (error) throw error
   return data as string
 }

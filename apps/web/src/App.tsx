@@ -8,6 +8,7 @@ import ResultsScreen from './features/results/ResultsScreen'
 import { SessionProvider } from './session'
 
 const RouteEditorScreen = lazy(() => import('./features/route/RouteEditorScreen'))
+const WatchScreen = lazy(() => import('./features/watch/WatchScreen'))
 
 export default function App() {
   return (
@@ -18,6 +19,7 @@ export default function App() {
             <Route path="/" element={<JoinScreen />} />
             <Route path="/join/:code" element={<JoinScreen />} />
             <Route path="/profile" element={<ProfileScreen />} />
+            <Route path="/watch/:code" element={<WatchScreen />} />
             <Route path="/trip/:tripId" element={<LobbyScreen />} />
             <Route path="/trip/:tripId/route" element={<RouteEditorScreen />} />
             <Route path="/trip/:tripId/results" element={<ResultsScreen />} />
