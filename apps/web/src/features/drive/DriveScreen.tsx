@@ -96,7 +96,7 @@ export default function DriveScreen() {
     const a = loadProfile().accent
     return isValidAccent(a) ? a : undefined
   }, [])
-  const { peers, publish, connected } = useConvoyChannel(tripId ?? '', userId, myAccent)
+  const { peers, publish, connected, spectators } = useConvoyChannel(tripId ?? '', userId, myAccent)
 
   const totalsRef = useRef(tripId ? loadTotals(tripId, userId) : emptyTotals())
   const pendingRef = useRef<LocationSample[]>([])
@@ -251,8 +251,11 @@ export default function DriveScreen() {
       <div className="hud">
         <div className="hud-top">
           <div className="eyebrow">{trip?.name ?? 'Drive Mode'}</div>
-          <span className={trip?.status === 'live' ? 'badge badge-live' : 'badge'}>
-            {connected ? (trip ? statusLabel[trip.status] : '…') : 'offline'}
+          <span style={{ display: 'flex', gap: 6 }}>
+            {spectators > 0 && <span className="badge">👁 {spectators}</span>}
+            <span className={trip?.status === 'live' ? 'badge badge-live' : 'badge'}>
+              {connected ? (trip ? statusLabel[trip.status] : '…') : 'offline'}
+            </span>
           </span>
         </div>
 

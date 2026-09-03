@@ -8,16 +8,32 @@ import { supabase } from '../lib/supabase'
  * else's latest. Private channel — authorized by the RLS policies on
  * realtime.messages (trip membership).
  */
-export function useConvoyChannel(tripId: string, userId: string, accent?: string) {
+export function useConvoyChannel(
+  tripId: string,
+  userId: string,
+  accent?: string,
+  role: 'driver' | 'spectator' = 'driver',
+) {
   const [peers, setPeers] = useState<Record<string, PositionPing>>({})
   const [connected, setConnected] = useState(false)
+  /** Anzahl gerade zuschauender Spectators — via Presence, kostet nur je eine
+   *  Nachricht bei Betreten/Verlassen, keinerlei laufende Calls. */
+  const [spectators, setSpectators] = useState(0)
   const channelRef = useRef<RealtimeChannel | null>(null)
   const queuedRef = useRef<LocationSample | null>(null)
 
   useEffect(() => {
     if (!tripId) return
     const ch = supabase.channel(tripChannel(tripId), {
-      config: { private: true, broadcast: { self: false } },
+      config: { private: true, broadcast: { self: false }, presence: { key: userId } },
+    })
+    ch.on('presence', { event: 'sync' }, () => {
+      const state = ch.presenceState<{ role?: string }>()
+      let n = 0
+      for (const metas of Object.values(state)) {
+        if (metas.some((m) => m.role === 'spectator')) n++
+      }
+      setSpectators(n)
     })
     ch.on('broadcast', { event: EVENT_POSITION }, ({ payload }) => {
       const ping = payload as PositionPing
@@ -26,6 +42,7 @@ export function useConvoyChannel(tripId: string, userId: string, accent?: string
     })
     ch.subscribe((status) => {
       setConnected(status === 'SUBSCRIBED')
+      if (status === 'SUBSCRIBED') void ch.track({ role })
       // deliver the fix that arrived while we were still joining
       if (status === 'SUBSCRIBED' && queuedRef.current) {
         const ping: PositionPing = { ...queuedRef.current, userId, accent }
@@ -38,9 +55,10 @@ export function useConvoyChannel(tripId: string, userId: string, accent?: string
       channelRef.current = null
       setConnected(false)
       setPeers({})
+      setSpectators(0)
       void supabase.removeChannel(ch)
     }
-  }, [tripId, userId])
+  }, [tripId, userId, role])
 
   const publish = useCallback(
     (s: LocationSample) => {
@@ -55,5 +73,5 @@ export function useConvoyChannel(tripId: string, userId: string, accent?: string
     [userId, accent],
   )
 
-  return { peers, publish, connected }
+  return { peers, publish, connected, spectators }
 }
