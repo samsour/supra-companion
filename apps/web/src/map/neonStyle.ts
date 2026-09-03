@@ -18,6 +18,24 @@ const WIDTH_SMALL = zoomWidth([[10, 0.4], [14, 2.5], [16, 4.5], [18, 10]])
  * (white majors, light-grey minors), POI clutter hidden. Skipped when a
  * hand-built Studio style is configured via VITE_MAPBOX_STYLE.
  */
+/** Sonnen-Boost: mittlere/kleine Straßen eine Stufe heller (und zurück). */
+export function applyRoadBrightness(map: mapboxgl.Map, sun: boolean): void {
+  if (hasCustomStyle) return
+  const secondary = sun ? '#c9d3df' : '#aab6c4'
+  const minor = sun ? '#a8b3c2' : '#8791a0'
+  for (const layer of map.getStyle()?.layers ?? []) {
+    const { id, type } = layer
+    if (type !== 'line') continue
+    try {
+      if (/case|casing|waterway|water-shadow|motorway|trunk|primary|major/.test(id)) continue
+      if (/secondary|tertiary/.test(id)) map.setPaintProperty(id, 'line-color', secondary)
+      else if (/road|street|minor|tunnel|bridge|link/.test(id)) map.setPaintProperty(id, 'line-color', minor)
+    } catch {
+      /* skip */
+    }
+  }
+}
+
 export function applyNeonStyle(map: mapboxgl.Map): void {
   if (hasCustomStyle) return
   const layers = map.getStyle()?.layers ?? []

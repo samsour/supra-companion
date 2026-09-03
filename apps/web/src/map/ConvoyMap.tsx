@@ -4,7 +4,7 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { useEffect, useRef, useState } from 'react'
 import { isValidAccent } from '../lib/accent'
 import { stopIcon } from '../lib/labels'
-import { applyNeonStyle } from './neonStyle'
+import { applyNeonStyle, applyRoadBrightness } from './neonStyle'
 
 const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
 const style =
@@ -28,6 +28,8 @@ interface Props {
   checkpoints: Checkpoint[]
   /** Zuschauer-Modus: Auto-Framing über Route + Konvoi statt Chase-Cam */
   spectate?: boolean
+  /** Sonnen-Boost: hellere Straßen, breitere/hellere Routenlinie */
+  sunBoost?: boolean
 }
 
 /** camera zoom while following own car — follow always returns to this */
@@ -74,7 +76,7 @@ function buildCarElements(car: CarPosition): { arrowRoot: HTMLDivElement; labelE
   return { arrowRoot, labelEl }
 }
 
-export default function ConvoyMap({ cars, route, checkpoints, spectate = false }: Props) {
+export default function ConvoyMap({ cars, route, checkpoints, spectate = false, sunBoost = false }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -131,6 +133,12 @@ export default function ConvoyMap({ cars, route, checkpoints, spectate = false }
     }
   }, [])
 
+  // --- sun boost: road brightness follows the toggle ---
+  useEffect(() => {
+    const map = mapRef.current
+    if (map && loaded) applyRoadBrightness(map, sunBoost)
+  }, [sunBoost, loaded])
+
   // --- neon route line ---
   useEffect(() => {
     const map = mapRef.current
@@ -144,14 +152,19 @@ export default function ConvoyMap({ cars, route, checkpoints, spectate = false }
       type: 'line',
       source: 'route',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#1f51ff', 'line-width': 18, 'line-blur': 12, 'line-opacity': 0.7 },
+      paint: {
+        'line-color': '#1f51ff',
+        'line-width': 18,
+        'line-blur': 12,
+        'line-opacity': sunBoost ? 0.85 : 0.7,
+      },
     })
     map.addLayer({
       id: 'route-core',
       type: 'line',
       source: 'route',
       layout: { 'line-cap': 'round', 'line-join': 'round' },
-      paint: { 'line-color': '#4d8dff', 'line-width': 5 },
+      paint: { 'line-color': sunBoost ? '#7aa9ff' : '#4d8dff', 'line-width': sunBoost ? 7 : 5 },
     })
     return () => {
       if (!map.getStyle()) return
@@ -159,7 +172,7 @@ export default function ConvoyMap({ cars, route, checkpoints, spectate = false }
       if (map.getLayer('route-glow')) map.removeLayer('route-glow')
       if (map.getSource('route')) map.removeSource('route')
     }
-  }, [route, loaded])
+  }, [route, loaded, sunBoost])
 
   // --- checkpoint pins ---
   useEffect(() => {

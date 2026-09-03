@@ -31,6 +31,20 @@ const ConvoyMap = lazy(() => import('../../map/ConvoyMap'))
 // tab at some point, and the km counter shouldn't reset when it does
 const totalsKey = (tripId: string, userId: string) => `supra.totals.${tripId}.${userId}`
 
+// Sonnen-Boost: tagsüber automatisch an, manuelle Wahl gewinnt und bleibt
+const SUN_KEY = 'supra.sun-mode'
+function initialSunMode(): boolean {
+  try {
+    const v = localStorage.getItem(SUN_KEY)
+    if (v === 'on') return true
+    if (v === 'off') return false
+  } catch {
+    /* egal */
+  }
+  const h = new Date().getHours()
+  return h >= 8 && h < 19
+}
+
 function loadTotals(tripId: string, userId: string): TripTotals {
   try {
     const raw = localStorage.getItem(totalsKey(tripId, userId))
@@ -63,6 +77,19 @@ export default function DriveScreen() {
 
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([])
   const [showOffline, setShowOffline] = useState(false)
+  const [sunMode, setSunMode] = useState(initialSunMode)
+
+  const toggleSunMode = () => {
+    setSunMode((v) => {
+      const next = !v
+      try {
+        localStorage.setItem(SUN_KEY, next ? 'on' : 'off')
+      } catch {
+        /* egal */
+      }
+      return next
+    })
+  }
 
   useEffect(() => {
     if (!tripId) return
@@ -238,15 +265,22 @@ export default function DriveScreen() {
   if (!tripId) return null
 
   return (
-    <div className="drive-full">
-      <Suspense fallback={<div className="map-placeholder" style={{ position: 'absolute', inset: 0 }}>Loading map…</div>}>
-        <ConvoyMap cars={cars} route={trip?.routeGeojson ?? null} checkpoints={sortedCheckpoints} />
+    <div className={sunMode ? 'drive-full sun-mode' : 'drive-full'}>
+      <Suspense fallback={<div className="map-placeholder" style={{ position: 'absolute', inset: 0 }}>Karte lädt…</div>}>
+        <ConvoyMap cars={cars} route={trip?.routeGeojson ?? null} checkpoints={sortedCheckpoints} sunBoost={sunMode} />
       </Suspense>
 
       <div className="hud">
         <div className="hud-top">
           <div className="eyebrow">{trip?.name ?? 'Drive Mode'}</div>
           <span style={{ display: 'flex', gap: 6 }}>
+            <button
+              className="badge sun-toggle"
+              aria-label={sunMode ? 'Sonnen-Boost ausschalten' : 'Sonnen-Boost einschalten'}
+              onClick={toggleSunMode}
+            >
+              {sunMode ? '☀️' : '🌙'}
+            </button>
             {/* Zuschauerzahl sieht bewusst nur der Organisator */}
             {spectators > 0 && trip?.organizerId === userId && (
               <span className="badge">👁 {spectators}</span>

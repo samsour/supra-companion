@@ -955,6 +955,70 @@ h1 .glow {
   color: var(--cyan);
 }
 
+/* ---------- Sonnen-Boost: gleiche Optik, mehr Kontrast bei Tageslicht ---------- */
+.sun-mode {
+  --text: #ffffff;
+  --muted: #cfd6e2;
+}
+
+.sun-mode .tile,
+.sun-mode .leaderboard {
+  background: rgba(9, 12, 19, 0.96);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-color: #39435c;
+}
+
+.sun-mode .tile .label {
+  font-size: 11px;
+}
+
+.sun-mode .tile .value {
+  font-size: 30px;
+}
+
+.sun-mode .tile.hero .value {
+  font-size: 48px;
+}
+
+.sun-mode .lb-row {
+  font-size: 17px;
+}
+
+.sun-mode .lb-gap {
+  font-size: 13px;
+}
+
+.sun-mode .car-arrow {
+  border-left-width: 10px;
+  border-right-width: 10px;
+  border-bottom-width: 22px;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 6px var(--car-color));
+}
+
+.sun-mode .car-self .car-arrow {
+  border-left-width: 12px;
+  border-right-width: 12px;
+  border-bottom-width: 26px;
+}
+
+.sun-mode .car-label {
+  font-size: 14px;
+  text-shadow: 0 1px 3px #000, 0 0 6px #000, 0 0 4px var(--car-color);
+}
+
+.sun-toggle {
+  cursor: pointer;
+  appearance: none;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.sun-toggle:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
 /* map controls: bottom-right corner, clear of tiles and leaderboard */
 .drive-full .overview-btn {
   left: auto;
