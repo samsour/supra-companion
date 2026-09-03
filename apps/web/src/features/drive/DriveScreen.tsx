@@ -362,21 +362,21 @@ export default function DriveScreen() {
                 <div className="label">{fmtTurnDist(nextTurn.distanceM)}</div>
               </div>
             )}
-            <div className="tile hero">
+            <div className="tile tile-mini">
               <div className="label">Tempo</div>
               <div className="value">
                 {speedKmh != null ? Math.round(speedKmh) : '—'}
                 <small>km/h</small>
               </div>
             </div>
-            <div className="tile">
+            <div className="tile tile-mini">
               <div className="label">Strecke</div>
               <div className="value">
                 {(totals.distanceM / 1000).toFixed(1)}
                 <small>km</small>
               </div>
             </div>
-            <div className="tile">
+            <div className="tile tile-mini">
               <div className="label">Fahrzeit</div>
               <div className="value">
                 {Math.floor(totals.movingSecs / 60)}
