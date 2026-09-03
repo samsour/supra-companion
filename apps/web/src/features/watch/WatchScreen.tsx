@@ -54,7 +54,7 @@ export default function WatchScreen() {
     return () => clearInterval(id)
   }, [])
 
-  const { peers, spectators } = useConvoyChannel(tripId ?? '', userId, undefined, 'spectator')
+  const { peers } = useConvoyChannel(tripId ?? '', userId, undefined, 'spectator')
   const now = Date.now()
   const livePeers = Object.values(peers).filter((p) => now - p.ts < STALE_AFTER_MS * 3)
   const drivers = members.filter((m) => m.role !== 'spectator')
@@ -187,7 +187,6 @@ export default function WatchScreen() {
               {livePeers.length > 0
                 ? `${livePeers.length} ${livePeers.length === 1 ? 'Auto' : 'Autos'} live`
                 : 'Warten auf den Konvoi…'}
-              {spectators > 1 && ` · 👁 ${spectators} schauen zu`}
             </span>
           </div>
         </div>

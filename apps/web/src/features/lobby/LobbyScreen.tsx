@@ -196,7 +196,8 @@ export default function LobbyScreen() {
       <div className="card">
         <div className="label">
           Fahrer ({members.filter((m) => m.role !== 'spectator').length})
-          {members.some((m) => m.role === 'spectator') &&
+          {isOrganizer &&
+            members.some((m) => m.role === 'spectator') &&
             ` · 👁 ${members.filter((m) => m.role === 'spectator').length} Zuschauer`}
         </div>
         <div>
