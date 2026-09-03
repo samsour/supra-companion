@@ -463,6 +463,23 @@ h1 .glow {
   height: 18px;
 }
 
+.cp-kind-btn {
+  appearance: none;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 1px 4px;
+  font-size: 15px;
+  cursor: pointer;
+  line-height: 1.2;
+}
+
+.cp-kind-btn:hover,
+.cp-kind-btn:focus-visible {
+  border-color: var(--line);
+  outline: none;
+}
+
 .cp-row-actions {
   display: flex;
   gap: 6px;

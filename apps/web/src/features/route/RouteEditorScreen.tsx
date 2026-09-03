@@ -20,6 +20,7 @@ import {
   matchToRoads,
   searchPlaces,
   setCheckpointOrder,
+  updateCheckpointKind,
   updateTripRoute,
   type PlaceHit,
 } from '../../lib/api'
@@ -157,7 +158,7 @@ export default function RouteEditorScreen() {
         for (const [i, s] of stopps.entries()) {
           await addCheckpoint(tripId, {
             name: s.name,
-            kind: 'meet',
+            kind: s.kind,
             lat: s.lat,
             lng: s.lng,
             orderIdx: checkpoints.length + i,
@@ -225,6 +226,19 @@ export default function RouteEditorScreen() {
       setError(errorMessage(e))
     }
     refreshCheckpoints()
+  }
+
+  /** Icon antippen wechselt den Stopp-Typ: ⛽ → 🍔 → 📸 → 📍 */
+  const cycleKind = async (cp: Checkpoint) => {
+    const KINDS: CheckpointKind[] = ['fuel', 'food', 'photo', 'meet']
+    const next = KINDS[(KINDS.indexOf(cp.kind) + 1) % KINDS.length]!
+    setCheckpoints((prev) => prev.map((c) => (c.id === cp.id ? { ...c, kind: next } : c)))
+    try {
+      await updateCheckpointKind(cp.id, next)
+    } catch (e) {
+      setError(errorMessage(e))
+      refreshCheckpoints()
+    }
   }
 
   const removeCheckpoint = async (cp: Checkpoint) => {
@@ -619,7 +633,16 @@ export default function RouteEditorScreen() {
               <div className="cp-row" key={cp.id}>
                 <span className="cp-row-name">
                   <span className="cp-row-idx">{i + 1}</span>{' '}
-                  {stopIcon(cp.kind, i === stopRows.length - 1 && (offM === null || offM <= 500))} {cp.name}{' '}
+                  <button
+                    type="button"
+                    className="cp-kind-btn"
+                    title="Typ ändern: Tanken → Essen → Foto → Treffpunkt"
+                    aria-label={`Stopp-Typ ändern, aktuell ${checkpointLabel[cp.kind]}`}
+                    onClick={() => void cycleKind(cp)}
+                  >
+                    {stopIcon(cp.kind, i === stopRows.length - 1 && (offM === null || offM <= 500))}
+                  </button>{' '}
+                  {cp.name}{' '}
                   {alongM !== null &&
                     (offM! > 500 ? (
                       <span className="cp-km cp-km-warn">⚠ {(offM! / 1000).toFixed(1)} km neben der Route</span>

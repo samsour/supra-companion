@@ -3,9 +3,19 @@
  * und <wpt>-Einträge als Stopp-Kandidaten. GPX ist der De-facto-Standard —
  * Komoot, Kurviger, Calimoto, Garmin, Outdooractive exportieren es alle.
  */
+import type { CheckpointKind } from '@supra/core'
+
 export interface GpxData {
   coordinates: [number, number][]
-  stopps: { name: string; lat: number; lng: number }[]
+  stopps: { name: string; kind: CheckpointKind; lat: number; lng: number }[]
+}
+
+/** Stopp-Typ aus dem Namen raten — trifft bei GPX-Waypoints erstaunlich oft. */
+export function guessStopKind(name: string): CheckpointKind {
+  if (/tank|fuel|gas ?station|shell|aral|esso|omv|\bjet\b|avia|agip|raststätte|rasthof/i.test(name)) return 'fuel'
+  if (/restaurant|essen|food|burger|pizza|imbiss|caf[eé]|b[äa]cker|gasthof|gasthaus|wirtshaus|grill|mc ?donald|kfc|h[üu]tte/i.test(name)) return 'food'
+  if (/foto|photo|aussicht|viewpoint|panorama|blick|spot/i.test(name)) return 'photo'
+  return 'meet'
 }
 
 export function parseGpx(xml: string, maxPoints = 1500): GpxData {
@@ -27,11 +37,15 @@ export function parseGpx(xml: string, maxPoints = 1500): GpxData {
   }
   const stopps = [...doc.getElementsByTagName('wpt')]
     .slice(0, 20)
-    .map((el) => ({
-      name: el.getElementsByTagName('name')[0]?.textContent?.trim() || 'Stopp',
-      lng: Number(el.getAttribute('lon')),
-      lat: Number(el.getAttribute('lat')),
-    }))
+    .map((el) => {
+      const name = el.getElementsByTagName('name')[0]?.textContent?.trim() || 'Stopp'
+      return {
+        name,
+        kind: guessStopKind(name),
+        lng: Number(el.getAttribute('lon')),
+        lat: Number(el.getAttribute('lat')),
+      }
+    })
     .filter((s) => Number.isFinite(s.lng) && Number.isFinite(s.lat))
   return { coordinates: pts, stopps }
 }

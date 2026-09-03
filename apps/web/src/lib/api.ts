@@ -162,6 +162,11 @@ export async function addCheckpoint(
   if (error) throw error
 }
 
+export async function updateCheckpointKind(checkpointId: string, kind: CheckpointKind): Promise<void> {
+  const { error } = await supabase.from('checkpoints').update({ kind }).eq('id', checkpointId)
+  if (error) throw error
+}
+
 export async function deleteCheckpoint(checkpointId: string): Promise<void> {
   const { error } = await supabase.from('checkpoints').delete().eq('id', checkpointId)
   if (error) throw error
