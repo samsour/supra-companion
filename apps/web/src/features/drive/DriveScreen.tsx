@@ -67,6 +67,7 @@ export default function DriveScreen() {
   const [, setTick] = useState(0)
 
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([])
+  const [showOffline, setShowOffline] = useState(false)
 
   useEffect(() => {
     if (!tripId) return
@@ -307,14 +308,35 @@ export default function DriveScreen() {
                   </span>
                 </div>
               ))}
-              {members
-                .filter((m) => !convoy.some((e) => e.userId === m.userId))
-                .map((m) => (
-                  <div className="lb-row lb-offline" key={m.userId}>
-                    <span className="lb-who">– {m.handle}</span>
-                    <span className="lb-gap">offline</span>
-                  </div>
-                ))}
+              {(() => {
+                const offline = members.filter((m) => !convoy.some((e) => e.userId === m.userId))
+                if (offline.length === 0) return null
+                // wenige Offline direkt zeigen; viele zu einer Zeile einklappen
+                if (offline.length <= 2 || showOffline) {
+                  return (
+                    <>
+                      {offline.map((m) => (
+                        <div className="lb-row lb-offline" key={m.userId}>
+                          <span className="lb-who">– {m.handle}</span>
+                          <span className="lb-gap">offline</span>
+                        </div>
+                      ))}
+                      {offline.length > 2 && (
+                        <button className="lb-row lb-offline lb-toggle" onClick={() => setShowOffline(false)}>
+                          <span className="lb-who">einklappen</span>
+                          <span className="lb-gap">▴</span>
+                        </button>
+                      )}
+                    </>
+                  )
+                }
+                return (
+                  <button className="lb-row lb-offline lb-toggle" onClick={() => setShowOffline(true)}>
+                    <span className="lb-who">– {offline.length} offline</span>
+                    <span className="lb-gap">▾</span>
+                  </button>
+                )
+              })()}
             </div>
           )}
         </div>
