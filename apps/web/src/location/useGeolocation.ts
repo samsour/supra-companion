@@ -5,15 +5,17 @@ import { useEffect, useRef, useState } from 'react'
  * Watch the device GPS. `onSample` fires for every fix (stable across renders
  * via ref, so callers may pass inline closures).
  */
+export type GeoError = 'denied' | 'unavailable' | 'timeout' | 'unsupported'
+
 export function useGeolocation(onSample: (s: LocationSample) => void) {
   const [latest, setLatest] = useState<LocationSample | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<GeoError | null>(null)
   const cbRef = useRef(onSample)
   cbRef.current = onSample
 
   useEffect(() => {
     if (!('geolocation' in navigator)) {
-      setError('This browser has no geolocation support.')
+      setError('unsupported')
       return
     }
     const id = navigator.geolocation.watchPosition(
@@ -30,7 +32,8 @@ export function useGeolocation(onSample: (s: LocationSample) => void) {
         setError(null)
         cbRef.current(s)
       },
-      (err) => setError(err.message),
+      (err) =>
+        setError(err.code === err.PERMISSION_DENIED ? 'denied' : err.code === err.POSITION_UNAVAILABLE ? 'unavailable' : 'timeout'),
       { enableHighAccuracy: true, maximumAge: 0, timeout: 15_000 },
     )
     return () => navigator.geolocation.clearWatch(id)

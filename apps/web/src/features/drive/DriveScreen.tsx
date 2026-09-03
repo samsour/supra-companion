@@ -342,7 +342,25 @@ export default function DriveScreen() {
         </div>
 
         <div className="hud-section hud-bottom">
-          {geoError && <div className="notice">GPS: {geoError}. Bitte Standortzugriff für diese Seite erlauben.</div>}
+          {geoError && (
+            <div className="notice">
+              {geoError === 'denied' ? (
+                <>
+                  <strong>Standortzugriff verweigert.</strong> iPhone: Einstellungen → Datenschutz &
+                  Sicherheit → Ortungsdienste → <strong>Safari-Websites</strong> auf „Beim Verwenden“
+                  (läuft die App vom Homescreen: dort deren eigenen Eintrag erlauben). Android:
+                  Website-Einstellungen → Standort → Zulassen. Danach:{' '}
+                  <button className="icon-btn" onClick={() => window.location.reload()}>Neu laden</button>
+                </>
+              ) : geoError === 'unavailable' ? (
+                'Kein GPS-Signal — freie Sicht zum Himmel hilft, es wird automatisch weiterversucht.'
+              ) : geoError === 'timeout' ? (
+                'GPS antwortet gerade nicht — es wird automatisch weiterversucht.'
+              ) : (
+                'Dieser Browser unterstützt keinen Standortzugriff.'
+              )}
+            </div>
+          )}
           {nextCp && (
             <div className="tile hud-next">
               <span className="label">Nächster Stopp</span>
