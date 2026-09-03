@@ -27,7 +27,10 @@ export function applyNeonStyle(map: mapboxgl.Map): void {
       if (type === 'background') {
         map.setPaintProperty(id, 'background-color', '#0a0d12')
       } else if (type === 'fill' && /water/.test(id)) {
-        map.setPaintProperty(id, 'fill-color', '#2f86d1')
+        // dunkles Nachtblau — Neonblau bleibt exklusiv der Routenlinie
+        map.setPaintProperty(id, 'fill-color', '#122c4a')
+      } else if (type === 'line' && /waterway|water-shadow/.test(id)) {
+        map.setPaintProperty(id, 'line-color', '#122c4a')
       } else if (type === 'fill' && /building/.test(id)) {
         map.setPaintProperty(id, 'fill-color', '#333f4c')
       } else if (type === 'fill' && /land|landuse|landcover|national-park|pitch|sand/.test(id)) {
