@@ -118,7 +118,7 @@ export default function WatchScreen() {
   return (
     <div className="drive-full">
       <Suspense fallback={<div className="map-placeholder" style={{ position: 'absolute', inset: 0 }}>Karte lädt…</div>}>
-        <ConvoyMap cars={cars} route={trip?.routeGeojson ?? null} checkpoints={checkpoints} spectate />
+        <ConvoyMap cars={cars} route={trip?.routeGeojson ?? null} checkpoints={checkpoints} spectate buildings3d />
       </Suspense>
 
       <div className="hud">

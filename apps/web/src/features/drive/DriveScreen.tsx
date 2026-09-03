@@ -64,18 +64,22 @@ function turnArrow(m: Maneuver): string {
 const fmtTurnDist = (m: number): string =>
   m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.max(50, Math.round(m / 50) * 50)} m`
 
-// Sonnen-Boost: tagsüber automatisch an, manuelle Wahl gewinnt und bleibt
-const SUN_KEY = 'supra.sun-mode'
-function initialSunMode(): boolean {
+// HUD-Modus: FOKUS (max. Kontrast, 2D) vs. FANCY (Glow, Milchglas, 3D).
+// Tagsüber startet Fokus, abends Fancy; manuelle Wahl gewinnt und bleibt.
+type HudMode = 'fokus' | 'fancy'
+const MODE_KEY = 'supra.hud-mode'
+function initialHudMode(): HudMode {
   try {
-    const v = localStorage.getItem(SUN_KEY)
-    if (v === 'on') return true
-    if (v === 'off') return false
+    const v = localStorage.getItem(MODE_KEY)
+    if (v === 'fokus' || v === 'fancy') return v
+    const legacy = localStorage.getItem('supra.sun-mode') // alte Sonnen-Boost-Wahl
+    if (legacy === 'on') return 'fokus'
+    if (legacy === 'off') return 'fancy'
   } catch {
     /* egal */
   }
   const h = new Date().getHours()
-  return h >= 8 && h < 19
+  return h >= 8 && h < 19 ? 'fokus' : 'fancy'
 }
 
 function loadTotals(tripId: string, userId: string): TripTotals {
@@ -111,13 +115,14 @@ export default function DriveScreen() {
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([])
   const [maneuvers, setManeuvers] = useState<Maneuver[]>([])
   const [showOffline, setShowOffline] = useState(false)
-  const [sunMode, setSunMode] = useState(initialSunMode)
+  const [hudMode, setHudMode] = useState<HudMode>(initialHudMode)
+  const sunMode = hudMode === 'fokus'
 
-  const toggleSunMode = () => {
-    setSunMode((v) => {
-      const next = !v
+  const toggleHudMode = () => {
+    setHudMode((v) => {
+      const next: HudMode = v === 'fokus' ? 'fancy' : 'fokus'
       try {
-        localStorage.setItem(SUN_KEY, next ? 'on' : 'off')
+        localStorage.setItem(MODE_KEY, next)
       } catch {
         /* egal */
       }
@@ -330,7 +335,13 @@ export default function DriveScreen() {
   return (
     <div className={sunMode ? 'drive-full sun-mode' : 'drive-full'}>
       <Suspense fallback={<div className="map-placeholder" style={{ position: 'absolute', inset: 0 }}>Karte lädt…</div>}>
-        <ConvoyMap cars={cars} route={trip?.routeGeojson ?? null} checkpoints={sortedCheckpoints} sunBoost={sunMode} />
+        <ConvoyMap
+          cars={cars}
+          route={trip?.routeGeojson ?? null}
+          checkpoints={sortedCheckpoints}
+          sunBoost={sunMode}
+          buildings3d={hudMode === 'fancy'}
+        />
       </Suspense>
 
       <div className="hud">
@@ -339,10 +350,10 @@ export default function DriveScreen() {
           <span style={{ display: 'flex', gap: 6 }}>
             <button
               className="badge sun-toggle"
-              aria-label={sunMode ? 'Sonnen-Boost ausschalten' : 'Sonnen-Boost einschalten'}
-              onClick={toggleSunMode}
+              aria-label={sunMode ? 'Zu Fancy-Modus wechseln' : 'Zu Fokus-Modus wechseln'}
+              onClick={toggleHudMode}
             >
-              {sunMode ? '☀︎' : '☾'}
+              {sunMode ? 'Fokus' : 'Fancy'}
             </button>
             {/* Zuschauerzahl sieht bewusst nur der Organisator */}
             {spectators > 0 && trip?.organizerId === userId && (

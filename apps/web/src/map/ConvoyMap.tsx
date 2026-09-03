@@ -30,6 +30,8 @@ interface Props {
   spectate?: boolean
   /** Sonnen-Boost: hellere Straßen, breitere/hellere Routenlinie */
   sunBoost?: boolean
+  /** 3D-Gebäude (Fancy-Modus / Zuschauer) */
+  buildings3d?: boolean
 }
 
 /** camera zoom while following own car — follow always returns to this */
@@ -76,7 +78,14 @@ function buildCarElements(car: CarPosition): { arrowRoot: HTMLDivElement; labelE
   return { arrowRoot, labelEl }
 }
 
-export default function ConvoyMap({ cars, route, checkpoints, spectate = false, sunBoost = false }: Props) {
+export default function ConvoyMap({
+  cars,
+  route,
+  checkpoints,
+  spectate = false,
+  sunBoost = false,
+  buildings3d = false,
+}: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const [loaded, setLoaded] = useState(false)
@@ -132,6 +141,37 @@ export default function ConvoyMap({ cars, route, checkpoints, spectate = false, 
       map.remove()
     }
   }, [])
+
+  // --- 3D-Gebäude (unterhalb der Routenlinie, damit sie sichtbar bleibt) ---
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !loaded) return
+    const B3D = 'supra-3d-buildings'
+    if (buildings3d && !map.getLayer(B3D)) {
+      try {
+        map.addLayer(
+          {
+            id: B3D,
+            type: 'fill-extrusion',
+            source: 'composite',
+            'source-layer': 'building',
+            minzoom: 13,
+            paint: {
+              'fill-extrusion-color': '#3a4653',
+              'fill-extrusion-height': ['get', 'height'],
+              'fill-extrusion-base': ['get', 'min_height'],
+              'fill-extrusion-opacity': 0.85,
+            },
+          },
+          map.getLayer('route-glow') ? 'route-glow' : undefined,
+        )
+      } catch {
+        /* custom style ohne composite-Quelle — dann eben flach */
+      }
+    } else if (!buildings3d && map.getLayer(B3D)) {
+      map.removeLayer(B3D)
+    }
+  }, [buildings3d, loaded, route])
 
   // --- sun boost: road brightness follows the toggle ---
   useEffect(() => {
