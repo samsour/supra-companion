@@ -215,27 +215,57 @@ export async function fetchDirections(
   return { geometry: body.routes[0].geometry, distanceM: body.routes[0].distance }
 }
 
+/** Ein Abbiege-Manöver auf der Route (nur echte Richtungswechsel). */
+export interface Maneuver {
+  lng: number
+  lat: number
+  type: string
+  modifier: string | null
+}
+
+interface ApiStep {
+  maneuver: { location: [number, number]; type: string; modifier?: string }
+}
+
+const TURN_RELEVANT = (s: ApiStep): boolean => {
+  const { type, modifier } = s.maneuver
+  if (type === 'roundabout' || type === 'rotary' || type === 'exit roundabout') return true
+  if (type === 'depart' || type === 'arrive') return false
+  return /left|right|uturn/.test(modifier ?? '')
+}
+
+const toManeuvers = (steps: ApiStep[]): Maneuver[] =>
+  steps.filter(TURN_RELEVANT).map((s) => ({
+    lng: s.maneuver.location[0],
+    lat: s.maneuver.location[1],
+    type: s.maneuver.type,
+    modifier: s.maneuver.modifier ?? null,
+  }))
+
 /** Mapbox Map Matching: rastet einen GPS-Track auf das Straßennetz.
  *  Max. 100 Punkte pro Anfrage — wird hier überlappend gechunkt. */
 export async function matchToRoads(
   coords: [number, number][],
-): Promise<{ geometry: RouteGeometry; distanceM: number }> {
+  withSteps = false,
+): Promise<{ geometry: RouteGeometry; distanceM: number; maneuvers: Maneuver[] }> {
   const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
   if (!token) throw new Error('VITE_MAPBOX_TOKEN fehlt')
   const chunks: [number, number][][] = []
   for (let i = 0; i < coords.length - 1; i += 99) chunks.push(coords.slice(i, i + 100))
   const all: [number, number][] = []
+  const maneuvers: Maneuver[] = []
   let distanceM = 0
   for (const chunk of chunks) {
     if (chunk.length < 2) continue
     const cs = chunk.map(([lng, lat]) => `${lng},${lat}`).join(';')
     const radiuses = chunk.map(() => 25).join(';')
-    const url = `https://api.mapbox.com/matching/v5/mapbox/driving/${cs}?geometries=geojson&overview=full&radiuses=${radiuses}&access_token=${token}`
+    const stepsParam = withSteps ? '&steps=true&language=de' : ''
+    const url = `https://api.mapbox.com/matching/v5/mapbox/driving/${cs}?geometries=geojson&overview=full&radiuses=${radiuses}${stepsParam}&access_token=${token}`
     const res = await fetch(url)
     const body = (await res.json()) as {
       code?: string
       message?: string
-      matchings?: { geometry: RouteGeometry; distance: number }[]
+      matchings?: { geometry: RouteGeometry; distance: number; legs?: { steps?: ApiStep[] }[] }[]
     }
     if (!res.ok || body.code !== 'Ok' || !body.matchings?.length) {
       throw new Error(body.message ?? `Map Matching fehlgeschlagen (${body.code ?? res.status})`)
@@ -243,10 +273,46 @@ export async function matchToRoads(
     for (const m of body.matchings) {
       all.push(...m.geometry.coordinates.slice(all.length > 0 ? 1 : 0))
       distanceM += m.distance
+      if (withSteps) maneuvers.push(...toManeuvers(m.legs?.flatMap((l) => l.steps ?? []) ?? []))
     }
   }
   if (all.length < 2) throw new Error('Map Matching lieferte keine Route')
-  return { geometry: { type: 'LineString', coordinates: all }, distanceM }
+  return { geometry: { type: 'LineString', coordinates: all }, distanceM, maneuvers }
+}
+
+/** Abbiege-Manöver der Route — Wegpunkt-Routen via Directions, importierte
+ *  via Map Matching; wirft nie, liefert notfalls leere Liste. */
+export async function getRouteManeuvers(trip: {
+  routeWaypoints: [number, number][] | null
+  routeGeojson: RouteGeometry | null
+}): Promise<Maneuver[]> {
+  try {
+    const token = import.meta.env.VITE_MAPBOX_TOKEN as string | undefined
+    if (!token) return []
+    if (trip.routeWaypoints && trip.routeWaypoints.length >= 2) {
+      const cs = trip.routeWaypoints.map(([lng, lat]) => `${lng},${lat}`).join(';')
+      const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${cs}?steps=true&overview=false&language=de&access_token=${token}`
+      const res = await fetch(url)
+      const body = (await res.json()) as {
+        code?: string
+        routes?: { legs: { steps: ApiStep[] }[] }[]
+      }
+      if (!res.ok || body.code !== 'Ok' || !body.routes?.[0]) return []
+      return toManeuvers(body.routes[0].legs.flatMap((l) => l.steps))
+    }
+    if (trip.routeGeojson) {
+      const pts = trip.routeGeojson.coordinates
+      const target = 380
+      const sampled =
+        pts.length <= target
+          ? pts
+          : Array.from({ length: target }, (_, i) => pts[Math.round((i * (pts.length - 1)) / (target - 1))]!)
+      return (await matchToRoads(sampled as [number, number][], true)).maneuvers
+    }
+  } catch {
+    /* keine Manöver → Kachel bleibt einfach weg */
+  }
+  return []
 }
 
 export interface PlaceHit {

@@ -21,7 +21,15 @@ import {
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { isValidAccent } from '../../lib/accent'
-import { getCheckpoints, getMembers, getTrip, insertSamples, loadProfile } from '../../lib/api'
+import {
+  getCheckpoints,
+  getMembers,
+  getRouteManeuvers,
+  getTrip,
+  insertSamples,
+  loadProfile,
+  type Maneuver,
+} from '../../lib/api'
 import { statusLabel, stopIcon } from '../../lib/labels'
 import { type CarPosition } from '../../map/ConvoyMap'
 
@@ -30,6 +38,31 @@ const ConvoyMap = lazy(() => import('../../map/ConvoyMap'))
 // totals survive reloads/crashes mid-drive — a mounted phone will lose the
 // tab at some point, and the km counter shouldn't reset when it does
 const totalsKey = (tripId: string, userId: string) => `supra.totals.${tripId}.${userId}`
+
+function turnArrow(m: Maneuver): string {
+  if (m.type === 'roundabout' || m.type === 'rotary' || m.type === 'exit roundabout') return '↻'
+  switch (m.modifier) {
+    case 'left':
+      return '↰'
+    case 'right':
+      return '↱'
+    case 'slight left':
+      return '↖'
+    case 'slight right':
+      return '↗'
+    case 'sharp left':
+      return '⬅'
+    case 'sharp right':
+      return '➡'
+    case 'uturn':
+      return '⮌'
+    default:
+      return '↑'
+  }
+}
+
+const fmtTurnDist = (m: number): string =>
+  m >= 1000 ? `${(m / 1000).toFixed(1)} km` : `${Math.max(50, Math.round(m / 50) * 50)} m`
 
 // Sonnen-Boost: tagsüber automatisch an, manuelle Wahl gewinnt und bleibt
 const SUN_KEY = 'supra.sun-mode'
@@ -76,6 +109,7 @@ export default function DriveScreen() {
   const [, setTick] = useState(0)
 
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([])
+  const [maneuvers, setManeuvers] = useState<Maneuver[]>([])
   const [showOffline, setShowOffline] = useState(false)
   const [sunMode, setSunMode] = useState(initialSunMode)
 
@@ -191,6 +225,29 @@ export default function DriveScreen() {
     [trip?.routeGeojson],
   )
 
+  // Abbiege-Manöver einmal pro Drive-Start holen (still, best effort)
+  useEffect(() => {
+    if (!trip?.routeGeojson) return
+    let alive = true
+    void getRouteManeuvers(trip).then((m) => {
+      if (alive) setManeuvers(m)
+    })
+    return () => {
+      alive = false
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip?.id, trip?.routeGeojson])
+
+  // Manöver auf der km-Achse; nächstes vor mir = der Pfeil
+  const manAlongs = useMemo(() => {
+    if (!routeIndex) return []
+    return maneuvers
+      .map((m) => ({ m, fix: snapToRoute(routeIndex, { lat: m.lat, lng: m.lng }) }))
+      .filter((x) => x.fix.offRouteM < 100)
+      .sort((a, b) => a.fix.alongM - b.fix.alongM)
+  }, [routeIndex, maneuvers])
+
+
   const now = Date.now()
   const livePeers = Object.values(peers).filter((p) => now - p.ts < STALE_AFTER_MS * 3)
 
@@ -209,6 +266,12 @@ export default function DriveScreen() {
   const me = convoy?.find((e) => e.userId === userId)
   const handleOf = (id: string) => members.find((m) => m.userId === id)?.handle ?? id.slice(0, 6)
   const drivers = useMemo(() => members.filter((m) => m.role !== 'spectator'), [members])
+
+  const nextTurn = useMemo(() => {
+    if (!me || me.offRoute) return null
+    const ahead = manAlongs.find((x) => x.fix.alongM > me.alongM + 15)
+    return ahead ? { ...ahead.m, distanceM: ahead.fix.alongM - me.alongM } : null
+  }, [manAlongs, me])
 
   // checkpoints projected onto the route, for the "next checkpoint" readout
   const cpAlongs = useMemo(() => {
@@ -293,6 +356,12 @@ export default function DriveScreen() {
 
         <div className="hud-mid">
           <div className="hud-tiles">
+            {nextTurn && (
+              <div className={nextTurn.distanceM < 200 ? 'tile tile-turn turn-soon' : 'tile tile-turn'}>
+                <div className="value turn-arrow">{turnArrow(nextTurn)}</div>
+                <div className="label">{fmtTurnDist(nextTurn.distanceM)}</div>
+              </div>
+            )}
             <div className="tile hero">
               <div className="label">Tempo</div>
               <div className="value">
