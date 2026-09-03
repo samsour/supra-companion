@@ -31,11 +31,6 @@ const ConvoyMap = lazy(() => import('../../map/ConvoyMap'))
 // tab at some point, and the km counter shouldn't reset when it does
 const totalsKey = (tripId: string, userId: string) => `supra.totals.${tripId}.${userId}`
 
-const fmtEta = (sec: number): string =>
-  sec < 5400
-    ? `${Math.max(1, Math.round(sec / 60))} min`
-    : `${Math.floor(sec / 3600)} h ${String(Math.round((sec % 3600) / 60)).padStart(2, '0')}`
-
 function loadTotals(tripId: string, userId: string): TripTotals {
   try {
     const raw = localStorage.getItem(totalsKey(tripId, userId))
@@ -377,11 +372,6 @@ export default function DriveScreen() {
               <span className="display" style={{ color: 'var(--cyan)' }}>
                 {(nextCp.distanceM / 1000).toFixed(nextCp.distanceM < 10_000 ? 1 : 0)} km
               </span>
-              {latest?.speedMps != null && latest.speedMps >= STATIONARY_SPEED_MPS && (
-                <span className="display" style={{ color: 'var(--muted)', fontSize: 16 }}>
-                  ~{fmtEta(nextCp.distanceM / latest.speedMps)}
-                </span>
-              )}
             </div>
           )}
           <div className="hud-links">
