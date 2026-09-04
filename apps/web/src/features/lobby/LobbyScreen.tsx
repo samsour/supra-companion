@@ -135,6 +135,9 @@ export default function LobbyScreen() {
     }
   }
 
+  const drivers = members.filter((m) => m.role !== 'spectator')
+  const spectatorCount = members.length - drivers.length
+
   return (
     <div className="screen">
       <header className="row">
@@ -180,62 +183,31 @@ export default function LobbyScreen() {
         </span>
       </header>
 
-      {/* Mitglieder: die eine wichtige Aktion zuerst */}
-      {!isOrganizer && trip.status === 'live' && (
+      {/* --- Hauptaktion, kontextuell nach Status und Rolle --- */}
+      {trip.status === 'draft' &&
+        (isOrganizer ? (
+          <button className="btn btn-primary" onClick={goLive}>Los geht's</button>
+        ) : (
+          <div className="card">
+            <p className="hint" style={{ margin: 0 }}>
+              Noch nicht gestartet —{' '}
+              {members.find((m) => m.role === 'organizer')?.handle ?? 'der Organisator'} gibt das
+              Startsignal. Danach erscheint hier „Drive Mode starten“.
+            </p>
+          </div>
+        ))}
+      {trip.status === 'live' && (
         <button className="btn btn-primary" onClick={() => navigate(`/trip/${tripId}/drive`)}>
           Drive Mode starten
         </button>
       )}
-      {!isOrganizer && trip.status === 'draft' && (
-        <div className="card">
-          <p className="hint" style={{ margin: 0 }}>
-            Noch nicht gestartet —{' '}
-            {members.find((m) => m.role === 'organizer')?.handle ?? 'der Organisator'} gibt das
-            Startsignal. Danach erscheint hier „Drive Mode starten“.
-          </p>
-        </div>
-      )}
-      {!isOrganizer && trip.status === 'ended' && (
+      {trip.status === 'ended' && (
         <button className="btn btn-primary" onClick={() => navigate(`/trip/${tripId}/results`)}>
           Ergebnis ansehen
         </button>
       )}
 
-      {isOrganizer && (
-      <div className="card">
-        <div className="label">Einladungscode — ab in den Gruppenchat</div>
-        <div className="invite-code">{trip.inviteCode}</div>
-        <button className="btn" onClick={() => void share()}>
-          {copied ? 'Link kopiert ✓' : '🔗 Einladungslink teilen'}
-        </button>
-        {trip.spectatorCode && (
-          <button className="btn" onClick={() => void shareWatch()}>
-            👁 Zuschauer-Link teilen
-          </button>
-        )}
-      </div>
-      )}
-
-      <div className="card">
-        <div className="label">
-          Fahrer ({members.filter((m) => m.role !== 'spectator').length})
-          {isOrganizer &&
-            members.some((m) => m.role === 'spectator') &&
-            ` · 👁 ${members.filter((m) => m.role === 'spectator').length} Zuschauer`}
-        </div>
-        <div>
-          {members.filter((m) => m.role !== 'spectator').map((m) => (
-            <div className="member" key={m.userId}>
-              <strong>{m.handle}{m.userId === userId ? ' (du)' : ''}</strong>
-              <span className="car">
-                {[m.carModel, m.carColor].filter(Boolean).join(' · ') || '—'}
-                {m.role === 'organizer' ? ' · Organisator' : ''}
-              </span>
-            </div>
-          ))}
-        </div>
-      </div>
-
+      {/* --- Route --- */}
       <div className="card">
         <div className="row">
           <div>
@@ -254,67 +226,61 @@ export default function LobbyScreen() {
         </div>
       </div>
 
-      {/* Mitglieder: Teilen kompakt in einer Zeile */}
-      {!isOrganizer && (
-        <div className="card">
-          <div className="row">
-            <div>
-              <div className="label">Einladungscode</div>
-              <span
-                className="display"
-                style={{ fontSize: 22, color: 'var(--cyan)', letterSpacing: '0.1em' }}
-              >
-                {trip.inviteCode}
+      {/* --- Fahrer --- */}
+      <div className="card">
+        <div className="label">
+          Fahrer ({drivers.length})
+          {isOrganizer && spectatorCount > 0 && ` · 👁 ${spectatorCount} Zuschauer`}
+        </div>
+        <div>
+          {drivers.map((m) => (
+            <div className="member" key={m.userId}>
+              <strong>{m.handle}{m.userId === userId ? ' (du)' : ''}</strong>
+              <span className="car">
+                {[m.carModel, m.carColor].filter(Boolean).join(' · ') || '—'}
+                {m.role === 'organizer' ? ' · Organisator' : ''}
               </span>
             </div>
-            <span className="cp-row-actions">
-              <button className="icon-btn" aria-label="Einladungslink teilen" onClick={() => void share()}>
-                🔗
-              </button>
-              {trip.spectatorCode && (
-                <button className="icon-btn" aria-label="Zuschauer-Link teilen" onClick={() => void shareWatch()}>
-                  👁
-                </button>
-              )}
+          ))}
+        </div>
+      </div>
+
+      {/* --- Einladen, kompakt --- */}
+      <div className="card">
+        <div className="row">
+          <div>
+            <div className="label">Einladen — Code für den Gruppenchat</div>
+            <span
+              className="display invite-code"
+              style={{ fontSize: 26, letterSpacing: '0.12em', textAlign: 'left' }}
+            >
+              {trip.inviteCode}
             </span>
           </div>
-          {copied && <span className="hint">Link kopiert ✓</span>}
+          <span className="cp-row-actions">
+            <button className="icon-btn" aria-label="Einladungslink teilen" onClick={() => void share()}>
+              🔗
+            </button>
+            {trip.spectatorCode && (
+              <button className="icon-btn" aria-label="Zuschauer-Link teilen" onClick={() => void shareWatch()}>
+                👁
+              </button>
+            )}
+          </span>
         </div>
-      )}
-
-      {isOrganizer && trip.status === 'draft' && (
-        <button className="btn btn-primary" onClick={goLive}>Los geht's</button>
-      )}
-      {isOrganizer && trip.status === 'live' && (
-        <>
-          <button className="btn btn-primary" onClick={() => navigate(`/trip/${tripId}/drive`)}>
-            Drive Mode starten
-          </button>
-          <button className="btn" onClick={end}>Trip beenden</button>
-        </>
-      )}
-      {isOrganizer && trip.status === 'ended' && (
-        <button className="btn btn-primary" onClick={() => navigate(`/trip/${tripId}/results`)}>
-          Ergebnis ansehen
-        </button>
-      )}
+        {copied && <span className="hint">Link kopiert ✓</span>}
+      </div>
 
       {error && <div className="notice">{error}</div>}
 
-      {isOrganizer ? (
-        <>
-          <button className="btn" onClick={duplicate}>Trip duplizieren</button>
-          <p className="hint" style={{ margin: 0 }}>
-            Kopiert Route und Stopps in einen neuen Trip — für Etappen, Vorlagen oder als Backup.
-          </p>
-        </>
-      ) : (
-        <p className="hint" style={{ margin: 0 }}>
-          <button className="linklike" onClick={duplicate}>Trip duplizieren</button> — Route &amp;
-          Stopps als eigene Kopie übernehmen.
-        </p>
+      {/* --- Verwaltung --- */}
+      {isOrganizer && trip.status === 'live' && (
+        <button className="btn" onClick={end}>Trip beenden</button>
       )}
-
+      <p className="hint" style={{ margin: 0 }}>
+        <button className="linklike" onClick={duplicate}>Trip duplizieren</button> — Route &amp;
+        Stopps als eigene Kopie übernehmen (Etappen, Vorlagen, Backup).
+      </p>
       {isOrganizer && (
         <button className="btn btn-danger" onClick={remove}>Trip löschen</button>
       )}
