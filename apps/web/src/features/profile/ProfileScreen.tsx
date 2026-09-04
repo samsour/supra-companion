@@ -2,7 +2,6 @@ import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ACCENTS, DEFAULT_ACCENT, applyAccent, isValidAccent } from '../../lib/accent'
 import { loadProfile, saveProfile } from '../../lib/api'
-import { fileToAvatar } from '../../lib/avatar'
 
 const STEPS = ['Dein Name', 'Deine Neonfarbe', 'Dein Auto'] as const
 
@@ -18,13 +17,67 @@ export default function ProfileScreen() {
   const avatarInputRef = useRef<HTMLInputElement>(null)
   const accent = isValidAccent(profile.accent) ? profile.accent : DEFAULT_ACCENT
 
-  const pickAvatar = async (file: File) => {
-    try {
-      setProfile({ ...profile, avatar: await fileToAvatar(file) })
-      setAvatarError(null)
-    } catch (e) {
-      setAvatarError(e instanceof Error ? e.message : 'Bild konnte nicht geladen werden')
+  // --- Zuschneiden: quadratischer Ausschnitt, Pan per Finger, Zoom per Slider ---
+  const CROP_V = 260 // Viewport-Kantenlänge in px
+  const [crop, setCrop] = useState<{ src: string; nw: number; nh: number } | null>(null)
+  const [zoom, setZoom] = useState(1)
+  const [off, setOff] = useState({ x: 0, y: 0 })
+  const cropImgRef = useRef<HTMLImageElement | null>(null)
+  const dragRef = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null)
+
+  const kOf = (c: { nw: number; nh: number }, z: number) => Math.max(CROP_V / c.nw, CROP_V / c.nh) * z
+  const clampOff = (x: number, y: number, k: number, c: { nw: number; nh: number }) => ({
+    x: Math.min(0, Math.max(CROP_V - c.nw * k, x)),
+    y: Math.min(0, Math.max(CROP_V - c.nh * k, y)),
+  })
+
+  const openCrop = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const src = reader.result as string
+      const img = new Image()
+      img.onload = () => {
+        cropImgRef.current = img
+        const c = { src, nw: img.naturalWidth, nh: img.naturalHeight }
+        const k = kOf(c, 1)
+        setCrop(c)
+        setZoom(1)
+        setOff({ x: (CROP_V - c.nw * k) / 2, y: (CROP_V - c.nh * k) / 2 })
+        setAvatarError(null)
+      }
+      img.onerror = () => setAvatarError('Bild konnte nicht gelesen werden')
+      img.src = src
     }
+    reader.readAsDataURL(file)
+  }
+
+  const onZoom = (z: number) => {
+    if (!crop) return
+    const k1 = kOf(crop, zoom)
+    const k2 = kOf(crop, z)
+    const c = CROP_V / 2
+    setOff(clampOff(c - (c - off.x) * (k2 / k1), c - (c - off.y) * (k2 / k1), k2, crop))
+    setZoom(z)
+  }
+
+  const confirmCrop = () => {
+    const img = cropImgRef.current
+    if (!crop || !img) return
+    const k = kOf(crop, zoom)
+    const canvas = document.createElement('canvas')
+    canvas.width = 96
+    canvas.height = 96
+    const ctx = canvas.getContext('2d')
+    if (!ctx) return
+    ctx.drawImage(img, -off.x / k, -off.y / k, CROP_V / k, CROP_V / k, 0, 0, 96, 96)
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8)
+    if (dataUrl.length > 40_000) {
+      setAvatarError('Bild zu groß — bitte ein anderes wählen')
+    } else {
+      setProfile({ ...profile, avatar: dataUrl })
+    }
+    setCrop(null)
+    cropImgRef.current = null
   }
 
   const forward = () => setStep((s) => Math.min(s + 1, STEPS.length - 1))
@@ -105,7 +158,7 @@ export default function ProfileScreen() {
                 hidden
                 onChange={(e) => {
                   const f = e.target.files?.[0]
-                  if (f) void pickAvatar(f)
+                  if (f) openCrop(f)
                   e.target.value = ''
                 }}
               />
@@ -180,6 +233,61 @@ export default function ProfileScreen() {
               />
             </div>
           </>
+        )}
+
+        {crop && (
+          <div className="crop-overlay">
+            <div className="crop-box card">
+              <div className="label">Bildausschnitt wählen — ziehen zum Verschieben</div>
+              <div
+                className="crop-viewport"
+                onPointerDown={(e) => {
+                  e.currentTarget.setPointerCapture(e.pointerId)
+                  dragRef.current = { px: e.clientX, py: e.clientY, ox: off.x, oy: off.y }
+                }}
+                onPointerMove={(e) => {
+                  const d = dragRef.current
+                  if (!d || !crop) return
+                  setOff(
+                    clampOff(d.ox + (e.clientX - d.px), d.oy + (e.clientY - d.py), kOf(crop, zoom), crop),
+                  )
+                }}
+                onPointerUp={() => {
+                  dragRef.current = null
+                }}
+              >
+                <img
+                  src={crop.src}
+                  alt=""
+                  draggable={false}
+                  style={{
+                    width: crop.nw,
+                    height: crop.nh,
+                    maxWidth: 'none',
+                    transform: `translate(${off.x}px, ${off.y}px) scale(${kOf(crop, zoom) })`,
+                    transformOrigin: '0 0',
+                  }}
+                />
+              </div>
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.01}
+                value={zoom}
+                onChange={(e) => onZoom(Number(e.target.value))}
+                aria-label="Zoom"
+              />
+              <div className="btn-row">
+                <button type="button" className="btn" onClick={() => setCrop(null)}>
+                  Abbrechen
+                </button>
+                <button type="button" className="btn btn-primary" onClick={confirmCrop}>
+                  Übernehmen
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
         <div className="btn-row">

@@ -657,6 +657,52 @@ h1 .glow {
   height: 46px;
 }
 
+/* Zuschneide-Dialog fürs Profilbild */
+.crop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: rgba(5, 7, 11, 0.85);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+}
+
+.crop-box {
+  width: 100%;
+  max-width: 300px;
+}
+
+.crop-viewport {
+  position: relative;
+  width: 260px;
+  height: 260px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 2px solid var(--amber);
+  touch-action: none;
+  cursor: grab;
+  background: var(--ground);
+}
+
+.crop-viewport:active {
+  cursor: grabbing;
+}
+
+.crop-viewport img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.crop-box input[type='range'] {
+  width: 100%;
+  accent-color: var(--amber);
+}
+
 .avatar-row {
   display: flex;
   align-items: center;
