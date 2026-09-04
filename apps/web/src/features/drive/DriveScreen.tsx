@@ -21,6 +21,7 @@ import {
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { isValidAccent } from '../../lib/accent'
+import { isAvatar } from '../../lib/avatar'
 import {
   getCheckpoints,
   getMembers,
@@ -157,7 +158,17 @@ export default function DriveScreen() {
     const a = loadProfile().accent
     return isValidAccent(a) ? a : undefined
   }, [])
-  const { peers, publish, connected, spectators } = useConvoyChannel(tripId ?? '', userId, myAccent)
+  const myAvatar = useMemo(() => {
+    const a = loadProfile().avatar
+    return isAvatar(a) ? a : undefined
+  }, [])
+  const { peers, publish, connected, spectators, avatars } = useConvoyChannel(
+    tripId ?? '',
+    userId,
+    myAccent,
+    'driver',
+    myAvatar,
+  )
 
   const totalsRef = useRef(tripId ? loadTotals(tripId, userId) : emptyTotals())
   const pendingRef = useRef<LocationSample[]>([])
@@ -309,6 +320,7 @@ export default function DriveScreen() {
       lng: p.lng,
       heading: p.heading,
       accent: p.accent ?? null,
+      avatar: avatars[p.userId] ?? null,
       isSelf: false,
       stale: now - p.ts > STALE_AFTER_MS,
     }))
@@ -320,6 +332,7 @@ export default function DriveScreen() {
         lng: latest.lng,
         heading: latest.heading,
         accent: myAccent ?? null,
+        avatar: myAvatar ?? null,
         isSelf: true,
         stale: false,
       })
@@ -341,6 +354,7 @@ export default function DriveScreen() {
           checkpoints={sortedCheckpoints}
           sunBoost={sunMode}
           buildings3d={hudMode === 'fancy'}
+          showAvatars={hudMode === 'fancy'}
         />
       </Suspense>
 

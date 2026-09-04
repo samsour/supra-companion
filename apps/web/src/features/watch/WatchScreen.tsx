@@ -54,7 +54,7 @@ export default function WatchScreen() {
     return () => clearInterval(id)
   }, [])
 
-  const { peers } = useConvoyChannel(tripId ?? '', userId, undefined, 'spectator')
+  const { peers, avatars } = useConvoyChannel(tripId ?? '', userId, undefined, 'spectator')
   const now = Date.now()
   const livePeers = Object.values(peers).filter((p) => now - p.ts < STALE_AFTER_MS * 3)
   const drivers = members.filter((m) => m.role !== 'spectator')
@@ -81,6 +81,7 @@ export default function WatchScreen() {
     lng: p.lng,
     heading: p.heading,
     accent: p.accent ?? null,
+    avatar: avatars[p.userId] ?? null,
     isSelf: false,
     stale: now - p.ts > STALE_AFTER_MS,
   }))
@@ -118,7 +119,7 @@ export default function WatchScreen() {
   return (
     <div className="drive-full">
       <Suspense fallback={<div className="map-placeholder" style={{ position: 'absolute', inset: 0 }}>Karte lädt…</div>}>
-        <ConvoyMap cars={cars} route={trip?.routeGeojson ?? null} checkpoints={checkpoints} spectate buildings3d />
+        <ConvoyMap cars={cars} route={trip?.routeGeojson ?? null} checkpoints={checkpoints} spectate buildings3d showAvatars />
       </Suspense>
 
       <div className="hud">

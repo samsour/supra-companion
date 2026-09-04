@@ -1,7 +1,8 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ACCENTS, DEFAULT_ACCENT, applyAccent, isValidAccent } from '../../lib/accent'
 import { loadProfile, saveProfile } from '../../lib/api'
+import { fileToAvatar } from '../../lib/avatar'
 
 const STEPS = ['Dein Name', 'Deine Neonfarbe', 'Dein Auto'] as const
 
@@ -13,7 +14,18 @@ export default function ProfileScreen() {
   const [isNew] = useState(() => !loadProfile().handle)
   const [profile, setProfile] = useState(loadProfile)
   const [step, setStep] = useState(0)
+  const [avatarError, setAvatarError] = useState<string | null>(null)
+  const avatarInputRef = useRef<HTMLInputElement>(null)
   const accent = isValidAccent(profile.accent) ? profile.accent : DEFAULT_ACCENT
+
+  const pickAvatar = async (file: File) => {
+    try {
+      setProfile({ ...profile, avatar: await fileToAvatar(file) })
+      setAvatarError(null)
+    } catch (e) {
+      setAvatarError(e instanceof Error ? e.message : 'Bild konnte nicht geladen werden')
+    }
+  }
 
   const forward = () => setStep((s) => Math.min(s + 1, STEPS.length - 1))
 
@@ -50,16 +62,56 @@ export default function ProfileScreen() {
 
       <form className="card" onSubmit={submitStep}>
         {step === 0 && (
-          <div>
-            <div className="label">So sehen dich die anderen auf der Karte</div>
-            <input
-              className="input"
-              autoFocus
-              placeholder="SAM"
-              value={profile.handle}
-              onChange={(e) => setProfile({ ...profile, handle: e.target.value })}
-            />
-          </div>
+          <>
+            <div>
+              <div className="label">So sehen dich die anderen auf der Karte</div>
+              <input
+                className="input"
+                autoFocus
+                placeholder="SAM"
+                value={profile.handle}
+                onChange={(e) => setProfile({ ...profile, handle: e.target.value })}
+              />
+            </div>
+            <div className="avatar-row">
+              <button
+                type="button"
+                className="avatar-pick"
+                style={{ '--swatch': accent } as React.CSSProperties}
+                onClick={() => avatarInputRef.current?.click()}
+                aria-label="Profilbild wählen"
+              >
+                {profile.avatar ? <img src={profile.avatar} alt="" /> : <span>📷</span>}
+              </button>
+              <div style={{ flex: 1 }}>
+                <div className="label">Profilbild (optional)</div>
+                <p className="hint" style={{ margin: '2px 0 6px' }}>
+                  Erscheint im Fancy-Modus statt des Pfeils auf der Karte.
+                </p>
+                {profile.avatar && (
+                  <button
+                    type="button"
+                    className="icon-btn icon-btn-danger"
+                    onClick={() => setProfile({ ...profile, avatar: undefined })}
+                  >
+                    Entfernen
+                  </button>
+                )}
+              </div>
+              <input
+                ref={avatarInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (f) void pickAvatar(f)
+                  e.target.value = ''
+                }}
+              />
+            </div>
+            {avatarError && <div className="notice">{avatarError}</div>}
+          </>
         )}
 
         {step === 1 && (
@@ -90,7 +142,13 @@ export default function ProfileScreen() {
                 <path d="M-10 78 C90 92 200 30 330 70" stroke="#4d8dff" strokeWidth="3.5" />
               </svg>
               <div className="preview-car" style={{ '--car-color': accent } as React.CSSProperties}>
-                <div className="car-arrow" style={{ transform: 'rotate(28deg)' }} />
+                {profile.avatar ? (
+                  <div className="car-avatar">
+                    <img src={profile.avatar} alt="" />
+                  </div>
+                ) : (
+                  <div className="car-arrow" style={{ transform: 'rotate(28deg)' }} />
+                )}
                 <div className="car-label">{profile.handle.trim() || 'DU'}</div>
               </div>
             </div>

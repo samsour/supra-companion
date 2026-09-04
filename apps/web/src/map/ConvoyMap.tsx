@@ -18,6 +18,8 @@ export interface CarPosition {
   heading: number | null
   /** driver-chosen neon color; falls back to hash color / amber for self */
   accent: string | null
+  /** kleines Profilbild (Data-URL); ersetzt bei showAvatars den Pfeil */
+  avatar: string | null
   isSelf: boolean
   stale: boolean
 }
@@ -32,6 +34,8 @@ interface Props {
   sunBoost?: boolean
   /** 3D-Gebäude (Fancy-Modus / Zuschauer) */
   buildings3d?: boolean
+  /** Profilbilder statt Pfeile zeigen (Fancy-Modus / Zuschauer) */
+  showAvatars?: boolean
 }
 
 /** camera zoom while following own car — follow always returns to this */
@@ -49,6 +53,8 @@ const colorFor = (userId: string) => {
 interface CarMarker {
   /** the arrow — lies flat on the map plane, rotates in map space */
   arrowMarker: mapboxgl.Marker
+  /** avatar variant: upright photo instead of a rotating arrow */
+  isAvatar: boolean
   /** the name tag — separate screen-aligned marker so it stays readable; null for self */
   labelMarker: mapboxgl.Marker | null
   arrowRoot: HTMLDivElement
@@ -58,18 +64,29 @@ interface CarMarker {
   heading: number
 }
 
-function buildCarElements(car: CarPosition): { arrowRoot: HTMLDivElement; labelEl: HTMLDivElement | null } {
+function buildCarElements(
+  car: CarPosition,
+  asAvatar: boolean,
+): { arrowRoot: HTMLDivElement; labelEl: HTMLDivElement | null } {
   const color = isValidAccent(car.accent)
     ? car.accent
     : car.isSelf
       ? '#ffa02e'
       : colorFor(car.userId)
   const arrowRoot = document.createElement('div')
-  arrowRoot.className = car.isSelf ? 'car-marker car-self' : 'car-marker'
   arrowRoot.style.setProperty('--car-color', color)
-  const arrow = document.createElement('div')
-  arrow.className = 'car-arrow'
-  arrowRoot.append(arrow)
+  if (asAvatar && car.avatar) {
+    arrowRoot.className = car.isSelf ? 'car-avatar car-self' : 'car-avatar'
+    const img = document.createElement('img')
+    img.src = car.avatar
+    img.alt = ''
+    arrowRoot.append(img)
+  } else {
+    arrowRoot.className = car.isSelf ? 'car-marker car-self' : 'car-marker'
+    const arrow = document.createElement('div')
+    arrow.className = 'car-arrow'
+    arrowRoot.append(arrow)
+  }
   if (car.isSelf) return { arrowRoot, labelEl: null } // own arrow stays label-free
   const labelEl = document.createElement('div')
   labelEl.className = 'car-label'
@@ -85,6 +102,7 @@ export default function ConvoyMap({
   spectate = false,
   sunBoost = false,
   buildings3d = false,
+  showAvatars = false,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
@@ -238,15 +256,22 @@ export default function ConvoyMap({
     const seen = new Set<string>()
     for (const car of cars) {
       seen.add(car.userId)
+      const wantAvatar = showAvatars && !!car.avatar
       let entry = carsRef.current.get(car.userId)
+      // Variante gewechselt (Modus-Toggle oder Avatar kam nach) → neu bauen
+      if (entry && entry.isAvatar !== wantAvatar) {
+        entry.arrowMarker.remove()
+        entry.labelMarker?.remove()
+        carsRef.current.delete(car.userId)
+        entry = undefined
+      }
       if (!entry) {
-        const { arrowRoot, labelEl } = buildCarElements(car)
-        const arrowMarker = new mapboxgl.Marker({
-          element: arrowRoot,
-          anchor: 'center',
-          pitchAlignment: 'map',
-          rotationAlignment: 'map',
-        })
+        const { arrowRoot, labelEl } = buildCarElements(car, wantAvatar)
+        const arrowMarker = new mapboxgl.Marker(
+          wantAvatar
+            ? { element: arrowRoot, anchor: 'center' }
+            : { element: arrowRoot, anchor: 'center', pitchAlignment: 'map', rotationAlignment: 'map' },
+        )
           .setLngLat([car.lng, car.lat])
           .addTo(map)
         const labelMarker = labelEl
@@ -256,6 +281,7 @@ export default function ConvoyMap({
           : null
         entry = {
           arrowMarker,
+          isAvatar: wantAvatar,
           labelMarker,
           arrowRoot,
           labelEl,
@@ -277,7 +303,7 @@ export default function ConvoyMap({
         carsRef.current.delete(id)
       }
     }
-  }, [cars, loaded])
+  }, [cars, loaded, showAvatars])
 
   // --- animation loop: glide markers toward targets, follow self ---
   useEffect(() => {
@@ -293,7 +319,7 @@ export default function ConvoyMap({
         entry.cur.lng += (entry.target.lng - entry.cur.lng) * alpha
         entry.arrowMarker.setLngLat([entry.cur.lng, entry.cur.lat])
         // map-space rotation: mapbox folds bearing/pitch in via the marker transform
-        entry.arrowMarker.setRotation(entry.heading)
+        if (!entry.isAvatar) entry.arrowMarker.setRotation(entry.heading)
         entry.labelMarker?.setLngLat([entry.cur.lng, entry.cur.lat])
       }
       raf = requestAnimationFrame(tick)

@@ -1,6 +1,7 @@
 import { EVENT_POSITION, tripChannel, type LocationSample, type PositionPing } from '@supra/core'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { isAvatar } from '../lib/avatar'
 import { supabase } from '../lib/supabase'
 
 /**
@@ -13,12 +14,15 @@ export function useConvoyChannel(
   userId: string,
   accent?: string,
   role: 'driver' | 'spectator' = 'driver',
+  avatar?: string,
 ) {
   const [peers, setPeers] = useState<Record<string, PositionPing>>({})
   const [connected, setConnected] = useState(false)
   /** Anzahl gerade zuschauender Spectators — via Presence, kostet nur je eine
    *  Nachricht bei Betreten/Verlassen, keinerlei laufende Calls. */
   const [spectators, setSpectators] = useState(0)
+  /** Profilbilder der Mitglieder, verteilt über Presence (einmalig je Join) */
+  const [avatars, setAvatars] = useState<Record<string, string>>({})
   const channelRef = useRef<RealtimeChannel | null>(null)
   const queuedRef = useRef<LocationSample | null>(null)
 
@@ -28,12 +32,16 @@ export function useConvoyChannel(
       config: { private: true, broadcast: { self: false }, presence: { key: userId } },
     })
     ch.on('presence', { event: 'sync' }, () => {
-      const state = ch.presenceState<{ role?: string }>()
+      const state = ch.presenceState<{ role?: string; avatar?: string }>()
       let n = 0
-      for (const metas of Object.values(state)) {
+      const av: Record<string, string> = {}
+      for (const [key, metas] of Object.entries(state)) {
         if (metas.some((m) => m.role === 'spectator')) n++
+        const a = metas.find((m) => m.avatar)?.avatar
+        if (isAvatar(a)) av[key] = a
       }
       setSpectators(n)
+      setAvatars(av)
     })
     ch.on('broadcast', { event: EVENT_POSITION }, ({ payload }) => {
       const ping = payload as PositionPing
@@ -42,7 +50,7 @@ export function useConvoyChannel(
     })
     ch.subscribe((status) => {
       setConnected(status === 'SUBSCRIBED')
-      if (status === 'SUBSCRIBED') void ch.track({ role })
+      if (status === 'SUBSCRIBED') void ch.track(avatar ? { role, avatar } : { role })
       // deliver the fix that arrived while we were still joining
       if (status === 'SUBSCRIBED' && queuedRef.current) {
         const ping: PositionPing = { ...queuedRef.current, userId, accent }
@@ -56,9 +64,10 @@ export function useConvoyChannel(
       setConnected(false)
       setPeers({})
       setSpectators(0)
+      setAvatars({})
       void supabase.removeChannel(ch)
     }
-  }, [tripId, userId, role])
+  }, [tripId, userId, role, avatar])
 
   const publish = useCallback(
     (s: LocationSample) => {
@@ -73,5 +82,5 @@ export function useConvoyChannel(
     [userId, accent],
   )
 
-  return { peers, publish, connected, spectators }
+  return { peers, publish, connected, spectators, avatars }
 }

@@ -637,6 +637,59 @@ h1 .glow {
   opacity: 0.4;
 }
 
+/* Avatar statt Pfeil (Fancy-Modus / Zuschauer) */
+.car-avatar {
+  pointer-events: none;
+}
+
+.car-avatar img {
+  display: block;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5px solid var(--car-color);
+  box-shadow: 0 0 10px var(--car-color), 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.car-avatar.car-self img {
+  width: 46px;
+  height: 46px;
+}
+
+.avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.avatar-pick {
+  appearance: none;
+  width: 72px;
+  height: 72px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--panel2);
+  font-size: 26px;
+  cursor: pointer;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  padding: 0;
+}
+
+.avatar-pick img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatar-pick:focus-visible {
+  outline: 2px solid var(--amber);
+  outline-offset: 2px;
+}
+
 .cp-marker {
   font-size: 16px;
   filter: drop-shadow(0 0 4px rgba(53, 224, 242, 0.6));
