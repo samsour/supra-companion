@@ -116,6 +116,25 @@ export default function DriveScreen() {
   const [checkpoints, setCheckpoints] = useState<Checkpoint[]>([])
   const [maneuvers, setManeuvers] = useState<Maneuver[]>([])
   const [showOffline, setShowOffline] = useState(false)
+  // "Nächster Stopp" einklappbar — kann sonst den eigenen Cursor überlappen
+  const [nextCpMini, setNextCpMini] = useState(() => {
+    try {
+      return localStorage.getItem('supra.nextcp-mini') === '1'
+    } catch {
+      return false
+    }
+  })
+  const toggleNextCpMini = () => {
+    setNextCpMini((v) => {
+      const n = !v
+      try {
+        localStorage.setItem('supra.nextcp-mini', n ? '1' : '0')
+      } catch {
+        /* egal */
+      }
+      return n
+    })
+  }
   const [hudMode, setHudMode] = useState<HudMode>(initialHudMode)
   const sunMode = hudMode === 'fokus'
 
@@ -492,15 +511,30 @@ export default function DriveScreen() {
             </div>
           )}
           {nextCp && (
-            <div className="tile hud-next">
-              <span className="label">Nächster Stopp</span>
-              <strong className="display">
-                {stopIcon(nextCp.kind, nextCp.id === lastCpId)} {nextCp.name}
-              </strong>
-              <span className="display" style={{ color: 'var(--cyan)' }}>
-                {(nextCp.distanceM / 1000).toFixed(nextCp.distanceM < 10_000 ? 1 : 0)} km
-              </span>
-            </div>
+            <button
+              className={nextCpMini ? 'tile hud-next hud-next-mini' : 'tile hud-next'}
+              onClick={toggleNextCpMini}
+              aria-label={nextCpMini ? 'Nächsten Stopp ausklappen' : 'Nächsten Stopp einklappen'}
+            >
+              {nextCpMini ? (
+                <>
+                  <strong className="display">{stopIcon(nextCp.kind, nextCp.id === lastCpId)}</strong>
+                  <span className="display" style={{ color: 'var(--cyan)' }}>
+                    {(nextCp.distanceM / 1000).toFixed(nextCp.distanceM < 10_000 ? 1 : 0)} km
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span className="label">Nächster Stopp</span>
+                  <strong className="display">
+                    {stopIcon(nextCp.kind, nextCp.id === lastCpId)} {nextCp.name}
+                  </strong>
+                  <span className="display" style={{ color: 'var(--cyan)' }}>
+                    {(nextCp.distanceM / 1000).toFixed(nextCp.distanceM < 10_000 ? 1 : 0)} km
+                  </span>
+                </>
+              )}
+            </button>
           )}
           <div className="hud-links">
             <Link to={`/trip/${tripId}`}>← Lobby</Link>

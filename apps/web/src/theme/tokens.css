@@ -968,6 +968,20 @@ h1 .glow {
   align-items: baseline;
   gap: 10px;
   align-self: flex-start;
+  appearance: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hud-next-mini {
+  padding: 5px 12px 6px;
+  gap: 8px;
+}
+
+.hud-next-mini .display {
+  font-size: 16px;
 }
 
 .hud-next .display {
