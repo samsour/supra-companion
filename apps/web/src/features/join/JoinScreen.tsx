@@ -136,8 +136,11 @@ export default function JoinScreen() {
             Supra <span className="glow">Companion</span>
           </h1>
         </div>
-        <button className="user-chip" aria-label="Profil bearbeiten" onClick={() => navigate('/profile')}>
-          ▲
+        <button className="user-chip-wrap" aria-label="Profil bearbeiten" onClick={() => navigate('/profile')}>
+          <span className="user-chip">
+            {profileNow.avatar ? <img src={profileNow.avatar} alt="" /> : '▲'}
+          </span>
+          <span className="user-chip-label">Profil</span>
         </button>
       </header>
 
