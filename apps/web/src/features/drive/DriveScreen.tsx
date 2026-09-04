@@ -495,9 +495,10 @@ export default function DriveScreen() {
             <div className="notice">
               {geoError === 'denied' ? (
                 <>
-                  <strong>Standortzugriff verweigert.</strong> iPhone: Einstellungen → Datenschutz &
-                  Sicherheit → Ortungsdienste → <strong>Safari-Websites</strong> auf „Beim Verwenden“
-                  (läuft die App vom Homescreen: dort deren eigenen Eintrag erlauben). Android:
+                  <strong>Standortzugriff verweigert.</strong> iPhone: Einstellungen →{' '}
+                  <strong>Apps → Supra → Standort</strong> auf „Beim Verwenden“ (im Browser:
+                  Ortungsdienste → Safari-Websites). Hilft das nicht: App vom Homescreen löschen,
+                  Seite in Safari öffnen, Standort erlauben, neu installieren. Android:
                   Website-Einstellungen → Standort → Zulassen. Danach:{' '}
                   <button className="icon-btn" onClick={() => window.location.reload()}>Neu laden</button>
                 </>
