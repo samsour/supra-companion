@@ -359,9 +359,9 @@ export default function ConvoyMap({
     const map = mapRef.current
     if (!map || !loaded || !followRef.current || !self) return
     const bearing = self.heading ?? map.getBearing()
-    // push own car toward the lower third of the screen so most of the
-    // viewport shows the road ahead (course-up: ahead = up)
-    const offsetY = map.getContainer().clientHeight * 0.28
+    // own car slightly below center — road ahead dominates, without the
+    // marker sticking to the bottom HUD (course-up: ahead = up)
+    const offsetY = map.getContainer().clientHeight * 0.15
     map.easeTo({
       center: [self.lng, self.lat],
       zoom: FOLLOW_ZOOM,
