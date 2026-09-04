@@ -86,6 +86,23 @@ export default function JoinScreen() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [recent, setRecent] = useState(loadRecentTrips)
+  // Bestandsnutzer auf das neue Profilbild hinweisen (einmalig, wegklickbar)
+  const [avatarHintDismissed, setAvatarHintDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('supra.avatar-hint') === '1'
+    } catch {
+      return true
+    }
+  })
+  const profileNow = loadProfile()
+  const dismissAvatarHint = () => {
+    setAvatarHintDismissed(true)
+    try {
+      localStorage.setItem('supra.avatar-hint', '1')
+    } catch {
+      /* egal */
+    }
+  }
 
   useEffect(() => {
     if (!loadProfile().handle) {
@@ -125,6 +142,16 @@ export default function JoinScreen() {
       </header>
 
       <InstallHint />
+
+      {profileNow.handle && !profileNow.avatar && !avatarHintDismissed && (
+        <div className="card install-hint">
+          <div className="row">
+            <span className="label">📸 Neu: Profilbild — dein Foto statt Pfeil im Fancy-Modus</span>
+            <button className="icon-btn" aria-label="Hinweis schließen" onClick={dismissAvatarHint}>✕</button>
+          </div>
+          <button className="btn" onClick={() => navigate('/profile')}>Foto hinzufügen</button>
+        </div>
+      )}
 
       {recent.length > 0 && (
         <div className="card">
