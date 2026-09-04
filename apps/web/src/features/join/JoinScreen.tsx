@@ -156,28 +156,48 @@ export default function JoinScreen() {
         </div>
       )}
 
-      {recent.length > 0 && (
+      {recent.filter((t) => t.status === 'live').length > 0 && (
+        <div className="card" style={{ borderColor: 'color-mix(in srgb, var(--amber) 40%, transparent)' }}>
+          <div className="label" style={{ color: 'var(--amber)' }}>Läuft jetzt gerade</div>
+          <div>
+            {recent
+              .filter((t) => t.status === 'live')
+              .map((t) => (
+                <div className="recent-row" key={t.id}>
+                  <button className="recent-open" onClick={() => navigate(`/trip/${t.id}`)}>
+                    <strong>{t.name}</strong>
+                    <span className="badge badge-live">Live</span>
+                  </button>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {recent.filter((t) => t.status !== 'live').length > 0 && (
         <div className="card">
           <div className="label">Zuletzt dabei</div>
           <div>
-            {recent.map((t) => (
-              <div className="recent-row" key={t.id}>
-                <button className="recent-open" onClick={() => navigate(`/trip/${t.id}`)}>
-                  <strong>{t.name}</strong>
-                  <span className="car">{statusLabel[t.status]}</span>
-                </button>
-                <button
-                  className="icon-btn icon-btn-danger"
-                  aria-label="aus Liste entfernen"
-                  onClick={() => {
-                    forgetTrip(t.id)
-                    setRecent(loadRecentTrips())
-                  }}
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+            {recent
+              .filter((t) => t.status !== 'live')
+              .map((t) => (
+                <div className="recent-row" key={t.id}>
+                  <button className="recent-open" onClick={() => navigate(`/trip/${t.id}`)}>
+                    <strong>{t.name}</strong>
+                    <span className="car">{statusLabel[t.status]}</span>
+                  </button>
+                  <button
+                    className="icon-btn icon-btn-danger"
+                    aria-label="aus Liste entfernen"
+                    onClick={() => {
+                      forgetTrip(t.id)
+                      setRecent(loadRecentTrips())
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
           </div>
         </div>
       )}
