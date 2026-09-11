@@ -183,6 +183,11 @@ export default function ReplayScreen() {
     if (!map || !loaded || !span || drivers.length === 0) return
 
     const markers = drivers.map((d) => {
+      // Segmentgrenzen an Aufzeichnungslücken — Trails werden dort getrennt
+      const segStarts: number[] = [0]
+      for (let i = 1; i < d.pts.length; i++) {
+        if (d.pts[i]!.ts - d.pts[i - 1]!.ts >= GAP_MS) segStarts.push(i)
+      }
       const root = document.createElement('div')
       root.className = 'car-marker'
       root.style.setProperty('--car-color', d.color)
@@ -198,6 +203,8 @@ export default function ReplayScreen() {
         d,
         idx: 0,
         hidden: false,
+        segStarts,
+        lastPos: [first.lng, first.lat] as [number, number],
         arrow: new mapboxgl.Marker({ element: root, anchor: 'center', pitchAlignment: 'map', rotationAlignment: 'map' })
           .setLngLat([first.lng, first.lat])
           .addTo(map),
@@ -224,6 +231,8 @@ export default function ReplayScreen() {
     let camTarget: { lng: number; lat: number; zoom: number } | null = null
     let lastCamCalc = 0
     let endCamSet = false
+    let leaderId: string | null = null
+    const MIN_MOVE_M = 500 // so viel Bewegung im Kamerafenster zählt als "fährt"
     let lastTrail = 0
     let lastUi = 0
     let raf = 0
@@ -252,6 +261,7 @@ export default function ReplayScreen() {
         const lat = a.lat + (b.lat - a.lat) * frac
         m.arrow.setLngLat([lng, lat]).setRotation(bearingDeg(a, b))
         m.label.setLngLat([lng, lat])
+        m.lastPos = [lng, lat]
 
         // Handy aus / lange Pause: kurz nach dem letzten Punkt ausblenden,
         // damit die Kamera nur den fahrenden Rest einrahmt (Spur bleibt)
@@ -265,10 +275,23 @@ export default function ReplayScreen() {
         if (!hidden) positions.push([lng, lat])
 
         if (now - lastTrail > 100) {
-          const coords = pts.slice(0, m.idx + 1).map((p) => [p.lng, p.lat] as [number, number])
-          coords.push([lng, lat])
+          // Spur segmentweise (an Lücken getrennt) statt einer Riesenlinie
+          const lines: [number, number][][] = []
+          for (let s = 0; s < m.segStarts.length; s++) {
+            const start = m.segStarts[s]!
+            if (start > m.idx) break
+            const segEnd = (s + 1 < m.segStarts.length ? m.segStarts[s + 1]! : pts.length) - 1
+            const upto = Math.min(segEnd, m.idx)
+            const line = pts.slice(start, upto + 1).map((p) => [p.lng, p.lat] as [number, number])
+            if (upto === m.idx && frac > 0) line.push([lng, lat])
+            if (line.length >= 2) lines.push(line)
+          }
           const src = map.getSource(`trail-${m.d.userId}`) as mapboxgl.GeoJSONSource | undefined
-          src?.setData({ type: 'Feature', geometry: { type: 'LineString', coordinates: coords }, properties: {} })
+          src?.setData({
+            type: 'Feature',
+            geometry: { type: 'MultiLineString', coordinates: lines },
+            properties: {},
+          })
         }
       }
       if (now - lastTrail > 100) lastTrail = now
@@ -295,25 +318,40 @@ export default function ReplayScreen() {
         endCamSet = false
         if (positions.length > 0 && now - lastCamCalc > 1000) {
           lastCamCalc = now
-          // Momentanpositionen + jüngste Spur der Aktiven als Rahmen
-          const boundsPts: [number, number][] = [...positions]
-          for (const mm of markers) {
-            if (mm.hidden) continue
-            let k = mm.idx
-            while (k >= 0 && mm.d.pts[k]!.ts >= simT - CAM_TRAIL_MS) {
-              boundsPts.push([mm.d.pts[k]!.lng, mm.d.pts[k]!.lat])
-              k--
-            }
+          // je aktivem Fahrer: jüngste Spur (Kamerafenster) + Bewegungsstrecke darin
+          const cands = markers
+            .filter((mm) => !mm.hidden)
+            .map((mm) => {
+              const pts = mm.d.pts
+              const win: [number, number][] = [mm.lastPos]
+              let k = mm.idx
+              while (k >= 0 && pts[k]!.ts >= simT - CAM_TRAIL_MS) {
+                win.push([pts[k]!.lng, pts[k]!.lat])
+                k--
+              }
+              const moveM = (mm.d.cum[mm.idx] ?? 0) - (mm.d.cum[k + 1] ?? 0)
+              return { id: mm.d.userId, win, moveM, totalM: mm.d.cum[mm.idx] ?? 0 }
+            })
+          // Leitfahrer: der Vorderste, der sich kontinuierlich bewegt — sticky,
+          // damit die Kamera nicht zwischen Autos springt
+          const moving = cands.filter((c) => c.moveM >= MIN_MOVE_M)
+          if (!moving.some((c) => c.id === leaderId)) {
+            leaderId = moving.sort((a, b) => b.totalM - a.totalM)[0]?.id ?? null
           }
-          const first = boundsPts[0]!
-          const bounds = boundsPts.reduce(
-            (bb, p) => bb.extend(p),
-            new mapboxgl.LngLatBounds(first, first),
-          )
-          const c = map.cameraForBounds(bounds, { padding: 120 })
-          if (c?.center) {
-            const ctr = mapboxgl.LngLat.convert(c.center)
-            camTarget = { lng: ctr.lng, lat: ctr.lat, zoom: Math.min(11.5, Math.max(7, (c.zoom ?? 10) - 0.5)) }
+          const leader = cands.find((c) => c.id === leaderId)
+          const boundsPts = leader ? leader.win : cands.flatMap((c) => c.win)
+          if (boundsPts.length > 0) {
+            const first = boundsPts[0]!
+            const bounds = boundsPts.reduce(
+              (bb, p) => bb.extend(p),
+              new mapboxgl.LngLatBounds(first, first),
+            )
+            const c = map.cameraForBounds(bounds, { padding: 120 })
+            if (c?.center) {
+              const ctr = mapboxgl.LngLat.convert(c.center)
+              const maxZoom = leader ? 12.5 : 11.5
+              camTarget = { lng: ctr.lng, lat: ctr.lat, zoom: Math.min(maxZoom, Math.max(7, (c.zoom ?? 10) - 0.4)) }
+            }
           }
         }
       }
