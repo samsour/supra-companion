@@ -366,25 +366,49 @@ export interface TrackPoint {
 }
 
 /** Alle aufgezeichneten Spuren eines Trips, je Fahrer zeitlich sortiert.
- *  Paginiert (REST liefert max. 1000 Zeilen je Anfrage), gefiltert auf
- *  brauchbare GPS-Genauigkeit, gedeckelt bei 60k Punkten. */
-export async function getTripTracks(tripId: string): Promise<Record<string, TrackPoint[]>> {
-  const out: Record<string, TrackPoint[]> = {}
+ *  Erst Gesamtzahl holen, dann Seiten parallel (5 gleichzeitig) laden;
+ *  onProgress meldet die kumulierten Punkte für die Ladeanzeige. */
+export async function getTripTracks(
+  tripId: string,
+  onProgress?: (rows: number) => void,
+): Promise<Record<string, TrackPoint[]>> {
   const BATCH = 1000
-  for (let from = 0; from < 60_000; from += BATCH) {
+  const CAP = 120_000
+  const { count, error: countError } = await supabase
+    .from('location_samples')
+    .select('id', { count: 'exact', head: true })
+    .eq('trip_id', tripId)
+  if (countError) throw countError
+  const total = Math.min(count ?? 0, CAP)
+
+  type Row = { user_id: string; lat: number; lng: number; ts: string }
+  const fetchPage = async (from: number): Promise<Row[]> => {
     const { data, error } = await supabase
       .from('location_samples')
       .select('user_id,lat,lng,ts')
       .eq('trip_id', tripId)
       .or('accuracy.is.null,accuracy.lte.30')
       .order('ts', { ascending: true })
+      .order('id', { ascending: true }) // deterministische Reihenfolge über Seiten
       .range(from, from + BATCH - 1)
     if (error) throw error
-    const rows = data as { user_id: string; lat: number; lng: number; ts: string }[]
-    for (const r of rows) {
-      ;(out[r.user_id] ??= []).push({ lat: r.lat, lng: r.lng, ts: Date.parse(r.ts) })
-    }
-    if (rows.length < BATCH) break
+    return data as Row[]
+  }
+
+  const offsets: number[] = []
+  for (let from = 0; from < total; from += BATCH) offsets.push(from)
+  const all: Row[] = []
+  const CONCURRENCY = 5
+  for (let i = 0; i < offsets.length; i += CONCURRENCY) {
+    const pages = await Promise.all(offsets.slice(i, i + CONCURRENCY).map(fetchPage))
+    for (const p of pages) all.push(...p)
+    onProgress?.(all.length)
+  }
+
+  all.sort((a, b) => a.ts.localeCompare(b.ts)) // ISO-Timestamps: lexikografisch = chronologisch
+  const out: Record<string, TrackPoint[]> = {}
+  for (const r of all) {
+    ;(out[r.user_id] ??= []).push({ lat: r.lat, lng: r.lng, ts: Date.parse(r.ts) })
   }
   return out
 }

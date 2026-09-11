@@ -194,10 +194,15 @@ export default function DriveScreen() {
   const latestRef = useRef<LocationSample | null>(null)
   const lastPingAtRef = useRef(0)
 
+  const lastStoredAtRef = useRef(0)
   const onSample = useCallback((s: LocationSample) => {
     totalsRef.current = addSample(totalsRef.current, s)
-    pendingRef.current.push(s)
     latestRef.current = s
+    // watchPosition feuert ~sekündlich — für Historie/Replay reichen 3s-Abstände
+    if (s.ts - lastStoredAtRef.current >= 3_000) {
+      lastStoredAtRef.current = s.ts
+      pendingRef.current.push(s)
+    }
   }, [])
 
   const { latest, error: geoError } = useGeolocation(onSample)
