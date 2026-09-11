@@ -16,6 +16,9 @@ const style =
 const REPLAY_MS = 75_000
 /** Pausen länger als das werden nicht interpoliert, sondern gehalten */
 const GAP_MS = 10 * 60_000
+/** so lange (Simulationszeit) bleibt ein Marker nach dem letzten Punkt
+ *  bzw. am Anfang einer langen Lücke sichtbar, dann blendet er aus */
+const GRACE_MS = 60_000
 
 const COLORS = ['#ffa02e', '#35e0f2', '#e653b8', '#7cff6b', '#ffd02e', '#9d7bff', '#ff6b5e']
 const colorFor = (id: string, i: number) => COLORS[i % COLORS.length] ?? '#ffa02e'
@@ -185,6 +188,7 @@ export default function ReplayScreen() {
     const cam = { lng: 0, lat: 0, zoom: 8, bearing: 0, init: false }
     let camTarget: { lng: number; lat: number; zoom: number } | null = null
     let lastCamCalc = 0
+    let endCamSet = false
     let lastTrail = 0
     let lastUi = 0
     let raf = 0
@@ -213,7 +217,16 @@ export default function ReplayScreen() {
         const lat = a.lat + (b.lat - a.lat) * frac
         m.arrow.setLngLat([lng, lat]).setRotation(bearingDeg(a, b))
         m.label.setLngLat([lng, lat])
-        if (simT >= pts[0]!.ts) positions.push([lng, lat])
+
+        // Handy aus / lange Pause: kurz nach dem letzten Punkt ausblenden,
+        // damit die Kamera nur den fahrenden Rest einrahmt (Spur bleibt)
+        const notStarted = simT < pts[0]!.ts
+        const ended = simT > pts[pts.length - 1]!.ts + GRACE_MS
+        const inGap = seg >= GAP_MS && simT > a.ts + GRACE_MS && simT < b.ts
+        const hidden = notStarted || ended || inGap
+        m.arrow.getElement().classList.toggle('car-hidden', hidden)
+        m.label.getElement().classList.toggle('car-hidden', hidden)
+        if (!hidden) positions.push([lng, lat])
 
         if (now - lastTrail > 100) {
           const coords = pts.slice(0, m.idx + 1).map((p) => [p.lng, p.lat] as [number, number])
@@ -224,18 +237,38 @@ export default function ReplayScreen() {
       }
       if (now - lastTrail > 100) lastTrail = now
 
-      // Kamera-Ziel jede Sekunde neu, Position jede Frame weich nachziehen
-      if (positions.length > 0 && now - lastCamCalc > 1000) {
-        lastCamCalc = now
-        const first = positions[0]!
-        const bounds = positions.reduce(
-          (bb, p) => bb.extend(p),
-          new mapboxgl.LngLatBounds(first, first),
-        )
-        const c = map.cameraForBounds(bounds, { padding: 110 })
-        if (c?.center) {
-          const ctr = mapboxgl.LngLat.convert(c.center)
-          camTarget = { lng: ctr.lng, lat: ctr.lat, zoom: Math.min(14.5, Math.max(7, (c.zoom ?? 10) - 0.3)) }
+      // Kamera-Ziel jede Sekunde neu, Position jede Frame weich nachziehen;
+      // am Ende einmal auf alle Spuren komplett aufziehen
+      if (progressRef.current >= 1) {
+        if (!endCamSet) {
+          endCamSet = true
+          const allPts = markers.flatMap((mm) => mm.d.pts.map((p) => [p.lng, p.lat] as [number, number]))
+          if (allPts.length > 0) {
+            const bounds = allPts.reduce(
+              (bb, p) => bb.extend(p),
+              new mapboxgl.LngLatBounds(allPts[0]!, allPts[0]!),
+            )
+            const c = map.cameraForBounds(bounds, { padding: 90 })
+            if (c?.center) {
+              const ctr = mapboxgl.LngLat.convert(c.center)
+              camTarget = { lng: ctr.lng, lat: ctr.lat, zoom: Math.min(13, Math.max(5, (c.zoom ?? 9) - 0.2)) }
+            }
+          }
+        }
+      } else {
+        endCamSet = false
+        if (positions.length > 0 && now - lastCamCalc > 1000) {
+          lastCamCalc = now
+          const first = positions[0]!
+          const bounds = positions.reduce(
+            (bb, p) => bb.extend(p),
+            new mapboxgl.LngLatBounds(first, first),
+          )
+          const c = map.cameraForBounds(bounds, { padding: 110 })
+          if (c?.center) {
+            const ctr = mapboxgl.LngLat.convert(c.center)
+            camTarget = { lng: ctr.lng, lat: ctr.lat, zoom: Math.min(14.5, Math.max(7, (c.zoom ?? 10) - 0.3)) }
+          }
         }
       }
       if (camTarget) {

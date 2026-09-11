@@ -678,6 +678,11 @@ h1 .glow {
   opacity: 0.4;
 }
 
+.car-hidden {
+  opacity: 0;
+  transition: opacity 0.5s ease;
+}
+
 /* Avatar statt Pfeil (Fancy-Modus / Zuschauer) */
 .car-avatar {
   pointer-events: none;
