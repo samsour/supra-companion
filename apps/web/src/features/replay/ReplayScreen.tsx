@@ -51,7 +51,6 @@ export default function ReplayScreen() {
   const [members, setMembers] = useState<TripMember[]>([])
   const [tracks, setTracks] = useState<Record<string, TrackPoint[]> | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [loadedRows, setLoadedRows] = useState(0)
   const [playing, setPlaying] = useState(true)
   const [progress, setProgress] = useState(0) // 0..1, nur fürs UI
   const [kmNow, setKmNow] = useState<Record<string, number>>({})
@@ -64,7 +63,7 @@ export default function ReplayScreen() {
     if (!tripId) return
     void getTrip(tripId).then(setTrip).catch((e: unknown) => setError(errorMessage(e)))
     void getMembers(tripId).then(setMembers).catch(() => {})
-    void getTripTracks(tripId, setLoadedRows)
+    void getTripTracks(tripId)
       .then(setTracks)
       .catch((e: unknown) => setError(errorMessage(e)))
   }, [tripId])
@@ -306,9 +305,7 @@ export default function ReplayScreen() {
               <>
                 <div className="spinner" aria-hidden="true" />
                 <div className="display" style={{ fontSize: 20 }}>Spuren werden geladen</div>
-                <p className="hint" style={{ margin: 0 }}>
-                  {loadedRows > 0 ? `${loadedRows.toLocaleString('de-DE')} GPS-Punkte …` : 'Verbinde …'}
-                </p>
+                <p className="hint" style={{ margin: 0 }}>Einen Moment …</p>
               </>
             )}
           </div>

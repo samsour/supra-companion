@@ -365,50 +365,15 @@ export interface TrackPoint {
   ts: number
 }
 
-/** Alle aufgezeichneten Spuren eines Trips, je Fahrer zeitlich sortiert.
- *  Erst Gesamtzahl holen, dann Seiten parallel (5 gleichzeitig) laden;
- *  onProgress meldet die kumulierten Punkte für die Ladeanzeige. */
-export async function getTripTracks(
-  tripId: string,
-  onProgress?: (rows: number) => void,
-): Promise<Record<string, TrackPoint[]>> {
-  const BATCH = 1000
-  const CAP = 120_000
-  const { count, error: countError } = await supabase
-    .from('location_samples')
-    .select('id', { count: 'exact', head: true })
-    .eq('trip_id', tripId)
-  if (countError) throw countError
-  const total = Math.min(count ?? 0, CAP)
-
-  type Row = { user_id: string; lat: number; lng: number; ts: string }
-  const fetchPage = async (from: number): Promise<Row[]> => {
-    const { data, error } = await supabase
-      .from('location_samples')
-      .select('user_id,lat,lng,ts')
-      .eq('trip_id', tripId)
-      .or('accuracy.is.null,accuracy.lte.30')
-      .order('ts', { ascending: true })
-      .order('id', { ascending: true }) // deterministische Reihenfolge über Seiten
-      .range(from, from + BATCH - 1)
-    if (error) throw error
-    return data as Row[]
-  }
-
-  const offsets: number[] = []
-  for (let from = 0; from < total; from += BATCH) offsets.push(from)
-  const all: Row[] = []
-  const CONCURRENCY = 5
-  for (let i = 0; i < offsets.length; i += CONCURRENCY) {
-    const pages = await Promise.all(offsets.slice(i, i + CONCURRENCY).map(fetchPage))
-    for (const p of pages) all.push(...p)
-    onProgress?.(all.length)
-  }
-
-  all.sort((a, b) => a.ts.localeCompare(b.ts)) // ISO-Timestamps: lexikografisch = chronologisch
+/** Aufgezeichnete Spuren eines Trips: ein RPC-Aufruf, serverseitig auf max.
+ *  1500 Punkte je Fahrer ausgedünnt (schnell trotz großer Sample-Tabelle). */
+export async function getTripTracks(tripId: string): Promise<Record<string, TrackPoint[]>> {
+  const { data, error } = await supabase.rpc('get_trip_track', { p_trip: tripId })
+  if (error) throw error
+  const raw = (data ?? {}) as Record<string, [number, number, number][]>
   const out: Record<string, TrackPoint[]> = {}
-  for (const r of all) {
-    ;(out[r.user_id] ??= []).push({ lat: r.lat, lng: r.lng, ts: Date.parse(r.ts) })
+  for (const [userId, pts] of Object.entries(raw)) {
+    out[userId] = pts.map(([lng, lat, ts]) => ({ lng, lat, ts }))
   }
   return out
 }
