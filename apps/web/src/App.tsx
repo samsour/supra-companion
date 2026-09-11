@@ -25,6 +25,7 @@ export default function App() {
             <Route path="/trip/:tripId/route" element={<RouteEditorScreen />} />
             <Route path="/trip/:tripId/results" element={<ResultsScreen />} />
             <Route path="/trip/:tripId/replay" element={<ReplayScreen />} />
+            <Route path="/replay/:code" element={<ReplayScreen />} />
             <Route path="/trip/:tripId/drive" element={<DriveScreen />} />
           </Routes>
         </Suspense>

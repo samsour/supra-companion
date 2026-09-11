@@ -3,7 +3,7 @@ import mapboxgl from 'mapbox-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getMembers, getTrip, getTripTracks, type TrackPoint } from '../../lib/api'
+import { getMembers, getTrip, getTripTracks, joinAsSpectator, type TrackPoint } from '../../lib/api'
 import { errorMessage } from '../../lib/errors'
 import { applyNeonStyle } from '../../map/neonStyle'
 import { useSession } from '../../session'
@@ -48,8 +48,12 @@ function downsample(pts: TrackPoint[], target = 1500): TrackPoint[] {
 }
 
 export default function ReplayScreen() {
-  const { tripId } = useParams<{ tripId: string }>()
+  // zwei Wege hierher: /trip/:tripId/replay (Mitglied) oder /replay/:code
+  // (geteilter Link — stiller Zuschauer-Beitritt über den Watch-Code)
+  const { tripId: tripIdParam, code } = useParams<{ tripId?: string; code?: string }>()
   useSession() // Auth sicherstellen
+  const [tripId, setTripId] = useState<string | null>(tripIdParam ?? null)
+  const [copied, setCopied] = useState(false)
   const [trip, setTrip] = useState<Trip | null>(null)
   const [members, setMembers] = useState<TripMember[]>([])
   const [tracks, setTracks] = useState<Record<string, TrackPoint[]> | null>(null)
@@ -63,6 +67,13 @@ export default function ReplayScreen() {
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
+    if (tripId || !code) return
+    joinAsSpectator(code)
+      .then(setTripId)
+      .catch((e: unknown) => setError(errorMessage(e)))
+  }, [code, tripId])
+
+  useEffect(() => {
     if (!tripId) return
     void getTrip(tripId).then(setTrip).catch((e: unknown) => setError(errorMessage(e)))
     void getMembers(tripId).then(setMembers).catch(() => {})
@@ -70,6 +81,26 @@ export default function ReplayScreen() {
       .then(setTracks)
       .catch((e: unknown) => setError(errorMessage(e)))
   }, [tripId])
+
+  const shareReplay = async () => {
+    if (!trip?.spectatorCode) return
+    const url = `${window.location.origin}/replay/${trip.spectatorCode}`
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: 'Supra Companion',
+          text: `▶ Replay unserer Etappe "${trip.name}" — schau dir die Fahrt im Zeitraffer an!`,
+          url,
+        })
+      } else {
+        await navigator.clipboard.writeText(url)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2_500)
+      }
+    } catch {
+      /* Share-Sheet abgebrochen */
+    }
+  }
 
   const drivers = useMemo<DriverTrack[]>(() => {
     if (!tracks) return []
@@ -308,7 +339,7 @@ export default function ReplayScreen() {
     }
   }, [loaded, span, drivers])
 
-  if (!tripId) return null
+  if (!tripId && !code) return null
   const simT = span ? span.t0 + progress * (span.t1 - span.t0) : null
 
   return (
@@ -348,10 +379,21 @@ export default function ReplayScreen() {
       <div className="hud">
         <div className="hud-top">
           <div className="eyebrow">▶ Replay · {trip?.name ?? '…'}</div>
+          <span style={{ display: 'flex', gap: 6 }}>
+            {trip?.spectatorCode && (
+              <button
+                className="badge sun-toggle"
+                aria-label="Replay-Link teilen"
+                onClick={() => void shareReplay()}
+              >
+                {copied ? '✓ kopiert' : '🔗 Teilen'}
+              </button>
+            )}
           <span className="badge">
             {simT !== null
               ? new Date(simT).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
               : '…'}
+          </span>
           </span>
         </div>
 
@@ -399,7 +441,7 @@ export default function ReplayScreen() {
           )}
 
           <div className="hud-links">
-            <Link to={`/trip/${tripId}/results`}>← Ergebnis</Link>
+            {!code && tripId && <Link to={`/trip/${tripId}/results`}>← Ergebnis</Link>}
           </div>
         </div>
       </div>
