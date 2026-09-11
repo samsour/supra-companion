@@ -86,6 +86,12 @@ export default function ResultsScreen() {
         </div>
       ))}
 
+      {stats.length > 0 && (
+        <Link className="btn btn-primary" to={`/trip/${tripId}/replay`} style={{ textDecoration: 'none' }}>
+          ▶ Replay der Etappe
+        </Link>
+      )}
+
       <p className="hint">
         <Link to={`/trip/${tripId}`} style={{ color: 'var(--cyan)' }}>← Zur Lobby</Link>
       </p>

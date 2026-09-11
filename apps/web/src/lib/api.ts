@@ -358,6 +358,37 @@ export async function finishTrip(tripId: string): Promise<void> {
   if (error) throw error
 }
 
+/** Ein Punkt der aufgezeichneten Spur (fürs Replay). */
+export interface TrackPoint {
+  lat: number
+  lng: number
+  ts: number
+}
+
+/** Alle aufgezeichneten Spuren eines Trips, je Fahrer zeitlich sortiert.
+ *  Paginiert (REST liefert max. 1000 Zeilen je Anfrage), gefiltert auf
+ *  brauchbare GPS-Genauigkeit, gedeckelt bei 60k Punkten. */
+export async function getTripTracks(tripId: string): Promise<Record<string, TrackPoint[]>> {
+  const out: Record<string, TrackPoint[]> = {}
+  const BATCH = 1000
+  for (let from = 0; from < 60_000; from += BATCH) {
+    const { data, error } = await supabase
+      .from('location_samples')
+      .select('user_id,lat,lng,ts')
+      .eq('trip_id', tripId)
+      .or('accuracy.is.null,accuracy.lte.30')
+      .order('ts', { ascending: true })
+      .range(from, from + BATCH - 1)
+    if (error) throw error
+    const rows = data as { user_id: string; lat: number; lng: number; ts: string }[]
+    for (const r of rows) {
+      ;(out[r.user_id] ??= []).push({ lat: r.lat, lng: r.lng, ts: Date.parse(r.ts) })
+    }
+    if (rows.length < BATCH) break
+  }
+  return out
+}
+
 export interface TripStatsRow {
   userId: string
   distanceKm: number

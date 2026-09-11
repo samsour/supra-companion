@@ -1176,6 +1176,68 @@ h1 .glow {
   font-size: 11px;
 }
 
+/* ---------- Replay ---------- */
+.replay-chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.replay-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  background: rgba(13, 18, 29, 0.85);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-family: var(--disp);
+  font-style: italic;
+  font-weight: 700;
+  font-size: 14px;
+  text-transform: uppercase;
+  color: var(--car-color);
+}
+
+.replay-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--car-color);
+  box-shadow: 0 0 6px var(--car-color);
+  align-self: center;
+}
+
+.replay-km {
+  font-family: var(--body);
+  font-style: normal;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.replay-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(13, 18, 29, 0.85);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 8px 12px;
+  pointer-events: auto;
+}
+
+.replay-controls input[type='range'] {
+  flex: 1;
+  accent-color: var(--amber);
+}
+
+.replay-controls .icon-btn {
+  font-size: 16px;
+  min-width: 40px;
+}
+
 /* ---------- Sonnen-Boost: gleiche Optik, mehr Kontrast bei Tageslicht ---------- */
 .sun-mode {
   --text: #ffffff;

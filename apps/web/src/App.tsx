@@ -8,6 +8,7 @@ import ResultsScreen from './features/results/ResultsScreen'
 import { SessionProvider } from './session'
 
 const RouteEditorScreen = lazy(() => import('./features/route/RouteEditorScreen'))
+const ReplayScreen = lazy(() => import('./features/replay/ReplayScreen'))
 const WatchScreen = lazy(() => import('./features/watch/WatchScreen'))
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
             <Route path="/trip/:tripId" element={<LobbyScreen />} />
             <Route path="/trip/:tripId/route" element={<RouteEditorScreen />} />
             <Route path="/trip/:tripId/results" element={<ResultsScreen />} />
+            <Route path="/trip/:tripId/replay" element={<ReplayScreen />} />
             <Route path="/trip/:tripId/drive" element={<DriveScreen />} />
           </Routes>
         </Suspense>
