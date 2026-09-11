@@ -19,6 +19,9 @@ const GAP_MS = 10 * 60_000
 /** so lange (Simulationszeit) bleibt ein Marker nach dem letzten Punkt
  *  bzw. am Anfang einer langen Lücke sichtbar, dann blendet er aus */
 const GRACE_MS = 60_000
+/** Kamera rahmt zusätzlich die Spur der letzten Sim-Minuten ein — gibt
+ *  Kontext und verhindert hektisches Kleben an den Momentanpositionen */
+const CAM_TRAIL_MS = 10 * 60_000
 
 const COLORS = ['#ffa02e', '#35e0f2', '#e653b8', '#7cff6b', '#ffd02e', '#9d7bff', '#ff6b5e']
 const colorFor = (id: string, i: number) => COLORS[i % COLORS.length] ?? '#ffa02e'
@@ -194,6 +197,7 @@ export default function ReplayScreen() {
       return {
         d,
         idx: 0,
+        hidden: false,
         arrow: new mapboxgl.Marker({ element: root, anchor: 'center', pitchAlignment: 'map', rotationAlignment: 'map' })
           .setLngLat([first.lng, first.lat])
           .addTo(map),
@@ -255,6 +259,7 @@ export default function ReplayScreen() {
         const ended = simT > pts[pts.length - 1]!.ts + GRACE_MS
         const inGap = seg >= GAP_MS && simT > a.ts + GRACE_MS && simT < b.ts
         const hidden = notStarted || ended || inGap
+        m.hidden = hidden
         m.arrow.getElement().classList.toggle('car-hidden', hidden)
         m.label.getElement().classList.toggle('car-hidden', hidden)
         if (!hidden) positions.push([lng, lat])
@@ -290,15 +295,25 @@ export default function ReplayScreen() {
         endCamSet = false
         if (positions.length > 0 && now - lastCamCalc > 1000) {
           lastCamCalc = now
-          const first = positions[0]!
-          const bounds = positions.reduce(
+          // Momentanpositionen + jüngste Spur der Aktiven als Rahmen
+          const boundsPts: [number, number][] = [...positions]
+          for (const mm of markers) {
+            if (mm.hidden) continue
+            let k = mm.idx
+            while (k >= 0 && mm.d.pts[k]!.ts >= simT - CAM_TRAIL_MS) {
+              boundsPts.push([mm.d.pts[k]!.lng, mm.d.pts[k]!.lat])
+              k--
+            }
+          }
+          const first = boundsPts[0]!
+          const bounds = boundsPts.reduce(
             (bb, p) => bb.extend(p),
             new mapboxgl.LngLatBounds(first, first),
           )
-          const c = map.cameraForBounds(bounds, { padding: 110 })
+          const c = map.cameraForBounds(bounds, { padding: 120 })
           if (c?.center) {
             const ctr = mapboxgl.LngLat.convert(c.center)
-            camTarget = { lng: ctr.lng, lat: ctr.lat, zoom: Math.min(14.5, Math.max(7, (c.zoom ?? 10) - 0.3)) }
+            camTarget = { lng: ctr.lng, lat: ctr.lat, zoom: Math.min(11.5, Math.max(7, (c.zoom ?? 10) - 0.5)) }
           }
         }
       }
@@ -306,12 +321,12 @@ export default function ReplayScreen() {
         if (!cam.init) {
           Object.assign(cam, camTarget, { init: true })
         } else {
-          const a = 1 - Math.exp((-dt / 1000) * 1.8)
+          const a = 1 - Math.exp((-dt / 1000) * 1.0)
           cam.lng += (camTarget.lng - cam.lng) * a
           cam.lat += (camTarget.lat - cam.lat) * a
           cam.zoom += (camTarget.zoom - cam.zoom) * a
         }
-        cam.bearing += (dt / 1000) * 2.5
+        cam.bearing += (dt / 1000) * 1.2
         map.jumpTo({ center: [cam.lng, cam.lat], zoom: cam.zoom, pitch: 50, bearing: cam.bearing })
       }
 
